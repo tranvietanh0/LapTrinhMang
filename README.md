@@ -54,6 +54,15 @@ Test tích hợp DAO chỉ chạy khi có DB:
 RACING_TEST_DB_URL=jdbc:mysql://localhost:3306/racing ./mvnw test
 ```
 
+## Chạy thử màn hình đua không cần server
+
+```
+mvnw.cmd -pl client -am exec:java -Dexec.mainClass=racing.client.ui.race.RaceDemo
+```
+
+`RaceDemo` giả lập server trong tiến trình: đếm ngược, đối thủ tự lái, va chạm, kết quả, hỏi thi đấu tiếp.
+Lớp `RaceFrame` chỉ cần một hàm gửi `Message` và phương thức `handle(Message)` để `NetworkClient` gọi, xem chú thích đầu lớp.
+
 ## Test server không cần giao diện
 
 ```
