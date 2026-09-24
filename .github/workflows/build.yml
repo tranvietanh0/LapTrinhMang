@@ -60,4 +60,5 @@ jobs:
           path: |
             server/target/racing-server.jar
             client/target/racing-client.jar
+            tools/target/racing-tools.jar
           if-no-files-found: ignore

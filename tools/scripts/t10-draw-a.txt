@@ -1,0 +1,15 @@
+# Kịch bản T10 (về đích cùng tick), client A. Chạy song song với t10-draw-b.txt.
+# java -jar racing-tools.jar --label A --script tools/scripts/t10-draw-a.txt
+login alice 123456
+expect LOGIN_RESULT 5000
+sleep 1000
+invite bob
+expect MATCH_START 40000
+expect COUNTDOWN 10000
+# chờ GO: server gửi COUNTDOWN 3,2,1,0 cách nhau 1 s
+sleep 3200
+drive 200 1
+expect MATCH_RESULT 30000
+rematch no
+sleep 500
+exit

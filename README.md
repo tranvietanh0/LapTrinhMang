@@ -13,6 +13,8 @@ Bài tập lớn môn Lập trình mạng, lớp LTM-2026-2-N01. Client Java Swi
 | `server` | `GameServer`, `ClientHandler`, các manager, `db/` (DAO) | Phạm Thị Thu Phương (server), Trần Việt Anh (`db/`) |
 | `client` | `NetworkClient`, sảnh, màn hình đua | Vũ Văn Hiếu (sảnh), Nguyễn Trần Mai Anh (đua) |
 | `db/` | `schema.sql`, `seed.sql`, `reset-db.sql` | Trần Việt Anh |
+| `tools` | `ScriptedClient`: client dòng lệnh nói giao thức để test server và chạy kịch bản T10, T17 | Trần Việt Anh |
+| `docs/` | `TEST-PLAN.md`: 17 kịch bản kiểm thử tích hợp | Trần Việt Anh |
 
 ## Yêu cầu máy
 
@@ -51,6 +53,23 @@ Test tích hợp DAO chỉ chạy khi có DB:
 ```
 RACING_TEST_DB_URL=jdbc:mysql://localhost:3306/racing ./mvnw test
 ```
+
+## Test server không cần giao diện
+
+```
+java -jar tools/target/racing-tools.jar "login alice 123456; wait LOGIN_RESULT; leaderboard; wait LEADERBOARD; exit"
+java -jar tools/target/racing-tools.jar --label B --auto-accept --script tools/scripts/t10-draw-b.txt
+```
+
+`--help` liệt kê đủ lệnh. Kịch bản mẫu trong `tools/scripts/`.
+
+## Đóng gói bản chạy
+
+```
+scripts\build-dist.cmd        # hoặc scripts/build-dist.sh
+```
+
+Tạo thư mục `dist/` gồm 3 jar, SQL, `db.properties.example`, `run-server` và `run-client`.
 
 ## Tạo hash mật khẩu cho tài khoản mới
 

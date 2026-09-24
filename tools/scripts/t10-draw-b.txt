@@ -1,0 +1,12 @@
+# Kịch bản T10 (về đích cùng tick), client B. Chạy TRƯỚC client A vài giây để kịp nhận lời mời.
+# java -jar racing-tools.jar --label B --auto-accept --script tools/scripts/t10-draw-b.txt
+login bob 123456
+expect LOGIN_RESULT 5000
+expect MATCH_START 60000
+expect COUNTDOWN 10000
+sleep 3200
+drive 200 2
+expect MATCH_RESULT 30000
+rematch no
+sleep 500
+exit

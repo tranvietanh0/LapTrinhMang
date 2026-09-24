@@ -1,0 +1,15 @@
+# Kịch bản T17: gửi tốc độ 999 km/h, server phải cắt về 200 và không cho thắng bất thường.
+# Cần một đối thủ đang chờ (ví dụ client Swing của bob, hoặc t10-draw-b.txt với --auto-accept).
+# java -jar racing-tools.jar --label CHEAT --script tools/scripts/t17-speed-cheat.txt
+login alice 123456
+expect LOGIN_RESULT 5000
+sleep 1000
+invite bob
+expect MATCH_START 40000
+expect COUNTDOWN 10000
+sleep 3200
+# quãng đường tự tính theo 999 km/h nhưng RACE_UPDATE từ server phải cho thấy speed <= 200
+drive 999 1
+expect MATCH_RESULT 60000
+rematch no
+exit
