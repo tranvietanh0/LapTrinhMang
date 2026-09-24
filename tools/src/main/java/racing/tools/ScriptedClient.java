@@ -65,6 +65,8 @@ public final class ScriptedClient implements AutoCloseable {
 
     private final Object waitLock = new Object();
     private final List<MessageType> received = new ArrayList<>();
+    /** Vị trí đã duyệt tới trong {@link #received}: wait/expect xét tiếp từ đây nên không bỏ lỡ thông điệp đến trong lúc drive/sleep. */
+    private int cursor = 0;
 
     public ScriptedClient(String host, int port, String label, boolean autoAccept, Boolean autoRematch)
             throws IOException {
@@ -78,10 +80,27 @@ public final class ScriptedClient implements AutoCloseable {
         this.reader = new Thread(this::readLoop, "reader-" + label);
         this.reader.setDaemon(true);
         this.reader.start();
+        Thread heartbeat = new Thread(this::heartbeatLoop, "ping-" + label);
+        heartbeat.setDaemon(true);
+        heartbeat.start();
         log("kết nối " + host + ":" + port);
     }
 
     // ------------------------------------------------------------------ nhận
+
+    /** PING mỗi HEARTBEAT_S giây như client thật, để server không coi là mất kết nối khi script đang chờ. */
+    private void heartbeatLoop() {
+        try {
+            while (running) {
+                Thread.sleep(GameConfig.HEARTBEAT_S * 1000L);
+                if (running) {
+                    send(Message.of(MessageType.PING));
+                }
+            }
+        } catch (InterruptedException | IOException ignored) {
+            // đang tắt hoặc mất kết nối; readLoop sẽ báo
+        }
+    }
 
     private void readLoop() {
         try {
@@ -137,14 +156,17 @@ public final class ScriptedClient implements AutoCloseable {
         }
     }
 
-    /** Chờ đến khi nhận loại thông điệp đó (kể từ lúc gọi). Trả về false nếu quá hạn hoặc mất kết nối. */
+    /**
+     * Chờ đến khi nhận loại thông điệp đó, xét từ sau thông điệp mà lần wait/expect trước đã khớp
+     * (nên thông điệp đến trong lúc drive/sleep vẫn được tính). Trả về false nếu quá hạn hoặc mất kết nối.
+     */
     public boolean waitFor(MessageType type, long timeoutMs) throws InterruptedException {
         long deadline = System.currentTimeMillis() + timeoutMs;
         synchronized (waitLock) {
-            int from = received.size();
             while (running) {
-                for (int i = from; i < received.size(); i++) {
+                for (int i = cursor; i < received.size(); i++) {
                     if (received.get(i) == type) {
+                        cursor = i + 1;
                         return true;
                     }
                 }

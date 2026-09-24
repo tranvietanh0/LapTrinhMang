@@ -10,11 +10,13 @@ Bài tập lớn môn Lập trình mạng, lớp LTM-2026-2-N01. Client Java Swi
 | Module | Nội dung | Phụ trách |
 |---|---|---|
 | `common` | `Message`, `MessageType`, DTO, `GameConfig` dùng chung | Trần Việt Anh |
-| `server` | `GameServer`, `ClientHandler`, các manager, `db/` (DAO) | Phạm Thị Thu Phương (server), Trần Việt Anh (`db/` nền), Nguyễn Trần Mai Anh (lịch sử trận, sự kiện) |
-| `client` | `NetworkClient`, sảnh, màn hình đua, xếp hạng, đăng ký, lịch sử | Vũ Văn Hiếu (sảnh), Trần Việt Anh (đua), Nguyễn Trần Mai Anh (xếp hạng, đăng ký, lịch sử) |
-| `db/` | `schema.sql`, `seed.sql`, `reset-db.sql`, `docs/DB.md` | Trần Việt Anh (schema), Nguyễn Trần Mai Anh (DB.md, truy vấn) |
+| `server` | `GameServer`, `net/ClientHandler`, `core/` (`SessionManager`, `InviteManager`, `Room`, `RoomManager`, `CarSim` trọng tài, `MatchService`, `AccountService`), `db/` (DAO, JDBC repository) | Phạm Thị Thu Phương (server), Trần Việt Anh (`db/` nền), Nguyễn Trần Mai Anh (lịch sử trận, sự kiện) |
+| `client` | `net/NetworkClient`, `ui/` (`LoginFrame`, `RegisterDialog`, `LobbyFrame`, `InviteDialog`, `LeaderboardFrame`, `HistoryFrame`, `RaceLauncher`), `ui/race/` (màn hình đua) | Vũ Văn Hiếu (sảnh), Trần Việt Anh (đua), Nguyễn Trần Mai Anh (xếp hạng, đăng ký, lịch sử) |
+| `db/` | `schema.sql`, `seed.sql`, `reset-db.sql`; mô tả bảng và truy vấn trong `docs/DB.md` | Trần Việt Anh (schema), Nguyễn Trần Mai Anh (DB.md, truy vấn) |
 | `tools` | `ScriptedClient`: client dòng lệnh nói giao thức để test server và chạy kịch bản T10, T17 | Trần Việt Anh |
-| `docs/` | `TEST-PLAN.md`: 17 kịch bản kiểm thử tích hợp | Trần Việt Anh |
+| `docs/` | `TEST-PLAN.md`: 19 kịch bản kiểm thử tích hợp; `DB.md`: cơ sở dữ liệu | Trần Việt Anh, Nguyễn Trần Mai Anh |
+
+Trạng thái 24/09/2026: toàn bộ MVP và phần làm thêm (đăng ký, lịch sử trận, ghi diễn biến) đã có trên `main`, CI xanh. Việc còn lại của nhóm là chạy kiểm thử tích hợp theo `docs/TEST-PLAN.md` trên 2 máy, sửa lỗi phát hiện được và chuẩn bị demo.
 
 ## Yêu cầu máy
 
@@ -37,9 +39,17 @@ Tài khoản mẫu: `alice`, `bob`, `carol`, `dave`, `erin`, `frank`, mật kh�
 
 ```
 ./mvnw package                       # Windows: mvnw.cmd package
-java -jar server/target/racing-server.jar
-java -jar client/target/racing-client.jar
+java -jar server/target/racing-server.jar            # cổng 5000, dùng MySQL theo db.properties
+java -jar client/target/racing-client.jar            # hoặc: racing-client.jar <host> <port>
 ```
+
+Server nhận tham số `[port]` và `--memory`. `--memory` chạy không cần MySQL: dữ liệu nằm trong bộ nhớ với 6 tài khoản mẫu, mất hết khi tắt server; chỉ dùng để thử nhanh hoặc demo khi chưa cài MySQL.
+
+```
+java -jar server/target/racing-server.jar --memory
+```
+
+Chạy hai client trên cùng máy (hai cửa sổ), đăng nhập `alice` và `bob`, thách đấu, chấp nhận, đua bằng W/S/A/D hoặc phím mũi tên.
 
 Chạy nhanh khi đang phát triển:
 
@@ -62,6 +72,16 @@ mvnw.cmd -pl client -am exec:java -Dexec.mainClass=racing.client.ui.race.RaceDem
 
 `RaceDemo` giả lập server trong tiến trình: đếm ngược, đối thủ tự lái, va chạm, kết quả, hỏi thi đấu tiếp.
 Lớp `RaceFrame` chỉ cần một hàm gửi `Message` và phương thức `handle(Message)` để `NetworkClient` gọi, xem chú thích đầu lớp.
+
+## Kịch bản demo 5 phút
+
+1. `docker compose up -d` (hoặc server `--memory`), chạy server, mở 2 client.
+2. Đăng nhập `alice` và `bob`: sảnh hai bên thấy nhau, trạng thái Rảnh.
+3. `alice` thách đấu `bob`: hộp thoại đếm ngược 30 s, bấm Chấp nhận.
+4. Đếm ngược 3-2-1-GO, đua 1000 m, 3 làn, 8 chướng ngại vật giống nhau hai bên; va chạm làm xe khựng 1 s.
+5. Về đích: hộp kết quả, điểm mới; hỏi thi đấu tiếp, một bên từ chối thì về sảnh.
+6. Mở Bảng xếp hạng và Lịch sử trận để thấy điểm và trận vừa đấu (với MySQL thì dữ liệu còn sau khi tắt server).
+7. Thoát trận giữa chừng (Esc) để thấy xử thua; đăng ký tài khoản mới ở màn hình đăng nhập.
 
 ## Test server không cần giao diện
 

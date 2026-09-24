@@ -2,6 +2,8 @@ package racing.server;
 
 import racing.common.GameConfig;
 import racing.server.core.AccountService;
+import racing.server.core.InMemoryMatchRepository;
+import racing.server.core.InMemoryPlayerRepository;
 import racing.server.core.InviteManager;
 import racing.server.core.MatchRepository;
 import racing.server.core.MatchService;
@@ -16,6 +18,7 @@ import racing.server.net.ClientHandler;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -24,7 +27,9 @@ import java.util.concurrent.TimeUnit;
 /**
  * Điểm vào server: mở ServerSocket, mỗi client một luồng trong pool, một scheduler chung
  * cho tick phòng (50 ms), đếm ngược và quét hết hạn lời mời / rematch (1 s).
- * <pre>java -jar racing-server.jar [port]</pre>
+ * <pre>java -jar racing-server.jar [port] [--memory]</pre>
+ * {@code --memory}: không cần MySQL, dữ liệu trong bộ nhớ với 6 tài khoản mẫu (mật khẩu 123456),
+ * mất hết khi tắt server. Chỉ để chạy thử / demo nhanh.
  */
 public final class GameServer {
 
@@ -60,6 +65,15 @@ public final class GameServer {
     /** Server dùng MySQL thật (cấu hình qua DbConnection). */
     public static GameServer withMysql(int port) {
         return new GameServer(port, new JdbcPlayerRepository(), new JdbcMatchRepository());
+    }
+
+    /** Server không cần MySQL: kho dữ liệu trong bộ nhớ, sẵn 6 tài khoản như db/seed.sql. */
+    public static GameServer withMemory(int port) {
+        InMemoryPlayerRepository players = new InMemoryPlayerRepository();
+        for (String name : List.of("alice", "bob", "carol", "dave", "erin", "frank")) {
+            players.add(name, "123456");
+        }
+        return new GameServer(port, players, new InMemoryMatchRepository(players));
     }
 
     public void start() throws IOException {
@@ -112,8 +126,22 @@ public final class GameServer {
     }
 
     public static void main(String[] args) throws Exception {
-        int port = args.length > 0 ? Integer.parseInt(args[0]) : GameConfig.PORT;
-        GameServer server = withMysql(port);
+        boolean memory = false;
+        int port = GameConfig.PORT;
+        for (String a : args) {
+            if (a.equals("--memory")) {
+                memory = true;
+            } else {
+                port = Integer.parseInt(a);
+            }
+        }
+        GameServer server;
+        if (memory) {
+            Log.warn("CHẾ ĐỘ --memory: không dùng MySQL, mọi điểm số và lịch sử sẽ mất khi tắt server");
+            server = withMemory(port);
+        } else {
+            server = withMysql(port);
+        }
         server.start();
         Runtime.getRuntime().addShutdownHook(new Thread(server::stop));
         Thread.currentThread().join();

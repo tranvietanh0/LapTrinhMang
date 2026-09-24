@@ -11,6 +11,8 @@ Nhóm 4 người, 4 tuần, từ **thứ Hai 29/09/2026** đến **Chủ nhật 
 
 > Phân công sửa ngày 24/09: Mai Anh chuyển từ màn hình đua sang nhóm việc dữ liệu (đơn giản hơn, thuần SQL và vài màn hình nhỏ); Việt Anh nhận màn hình đua vì phần nền D1–D4 đã hoàn thành sớm.
 
+> **Tiến độ 24/09/2026:** toàn bộ mã của các task S1–S7, C1–C7, M1–M5, R1–R5, D1–D4 đã có trên `main` (server, client sảnh, màn hình đua, đăng ký, xếp hạng, lịch sử, ghi diễn biến, `docs/DB.md`), 74 test tự động xanh trên CI với MySQL thật. Việc còn lại theo bảng dưới chuyển thành: mỗi người **đọc, chạy thử và rà lại phần của mình**, chạy kiểm thử tích hợp T1–T19 trên 2 máy (D6, M6), sửa lỗi tìm được (S7, C7, R6) và đóng gói demo (D7).
+
 ---
 
 ## 1. Phạm vi

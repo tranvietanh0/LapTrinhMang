@@ -27,3 +27,6 @@ dependency-reduced-pom.xml
 # LibreOffice / Word lock files
 .~lock.*#
 ~$*
+
+# Claude Code worktrees
+.claude/

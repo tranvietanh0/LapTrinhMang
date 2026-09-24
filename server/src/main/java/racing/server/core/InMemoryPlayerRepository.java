@@ -12,14 +12,17 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
-/** Bảng players trong bộ nhớ, mật khẩu lưu thô (chỉ cho test lõi). */
-final class InMemoryPlayerRepository implements PlayerRepository {
+/**
+ * Bảng players trong bộ nhớ, mật khẩu lưu thô. Dùng cho test lõi và cho chế độ
+ * {@code --memory} của GameServer (chạy thử không cần MySQL, dữ liệu mất khi tắt server).
+ */
+public final class InMemoryPlayerRepository implements PlayerRepository {
 
     final Map<Integer, PlayerRecord> byId = new LinkedHashMap<>();
     final Map<Integer, String> passwords = new LinkedHashMap<>();
     private int nextId = 1;
 
-    synchronized PlayerRecord add(String username, String password) {
+    public synchronized PlayerRecord add(String username, String password) {
         PlayerRecord r = new PlayerRecord(nextId++, username, "plain", 0, 0, 0, 0);
         byId.put(r.playerId(), r);
         passwords.put(r.playerId(), password);

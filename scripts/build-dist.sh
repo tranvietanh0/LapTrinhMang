@@ -15,7 +15,9 @@ cp docker-compose.yml dist/
 cat > dist/run-server.sh <<'EOF'
 #!/usr/bin/env bash
 cd "$(dirname "$0")"
-[ -f db.properties ] || { echo "Chưa có db.properties: sao chép db.properties.example và sửa mật khẩu"; exit 1; }
+case " $* " in *" --memory "*) ;; *)
+  [ -f db.properties ] || { echo "Chưa có db.properties: sao chép db.properties.example và sửa mật khẩu (hoặc chạy với --memory để thử không cần MySQL)"; exit 1; } ;;
+esac
 exec java -jar racing-server.jar "$@"
 EOF
 cat > dist/run-client.sh <<'EOF'
@@ -26,8 +28,9 @@ EOF
 cat > dist/run-server.cmd <<'EOF'
 @echo off
 cd /d %~dp0
-if not exist db.properties (
-  echo Chua co db.properties: sao chep db.properties.example va sua mat khau
+echo %* | findstr /C:"--memory" >nul
+if errorlevel 1 if not exist db.properties (
+  echo Chua co db.properties: sao chep db.properties.example va sua mat khau ^(hoac chay run-server.cmd --memory de thu khong can MySQL^)
   exit /b 1
 )
 java -jar racing-server.jar %*
@@ -43,6 +46,7 @@ Game dua xe thi dau doi khang online - ban chay
 1. Cai MySQL 8 (hoac: docker compose up -d) va nap db/schema.sql roi db/seed.sql.
 2. Sao chep db.properties.example thanh db.properties, sua user/mat khau.
 3. Chay server: run-server.cmd (Windows) hoac ./run-server.sh
+   Chua co MySQL? Chay run-server.cmd --memory (du lieu chi nam trong bo nho, mat khi tat server).
 4. Chay client tren moi may: run-client.cmd hoac ./run-client.sh
    Client ket noi toi localhost:5000; doi may khac thi sua host trong man hinh dang nhap.
 Tai khoan thu: alice, bob, carol, dave, erin, frank / mat khau 123456

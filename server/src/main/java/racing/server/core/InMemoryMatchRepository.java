@@ -11,7 +11,7 @@ import java.util.List;
 import java.util.Map;
 
 /** Bảng matches / match_events trong bộ nhớ; cộng điểm vào {@link InMemoryPlayerRepository} như DAO thật. */
-final class InMemoryMatchRepository implements MatchRepository {
+public final class InMemoryMatchRepository implements MatchRepository {
 
     record Match(int id, String roomCode, int p1, int p2, Integer winner, EndReason reason) {
     }
@@ -24,7 +24,7 @@ final class InMemoryMatchRepository implements MatchRepository {
     private final InMemoryPlayerRepository players;
     private int nextId = 1;
 
-    InMemoryMatchRepository(InMemoryPlayerRepository players) {
+    public InMemoryMatchRepository(InMemoryPlayerRepository players) {
         this.players = players;
     }
 
