@@ -1,0 +1,5 @@
+# Sao chép thành db.properties (cùng thư mục) và sửa theo máy của bạn.
+# db.properties đã nằm trong .gitignore, không commit file thật.
+db.url=jdbc:mysql://localhost:3306/racing?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Ho_Chi_Minh
+db.user=racing
+db.password=racing

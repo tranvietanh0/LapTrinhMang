@@ -1,0 +1,25 @@
+# MySQL cho phát triển và kiểm thử. Chạy: docker compose up -d
+# Schema và seed được nạp tự động lần đầu (thư mục db/ mount vào docker-entrypoint-initdb.d).
+services:
+  mysql:
+    image: mysql:8.4
+    container_name: racing-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: racing
+      MYSQL_USER: racing
+      MYSQL_PASSWORD: racing
+    ports:
+      - "3306:3306"
+    volumes:
+      - racing-mysql-data:/var/lib/mysql
+      - ./db/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+      - ./db/seed.sql:/docker-entrypoint-initdb.d/02-seed.sql:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-proot"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+volumes:
+  racing-mysql-data:
