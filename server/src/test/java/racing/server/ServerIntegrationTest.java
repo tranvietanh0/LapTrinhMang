@@ -52,9 +52,22 @@ class ServerIntegrationTest {
             out = new ObjectOutputStream(socket.getOutputStream());
             out.flush();
             in = new ObjectInputStream(socket.getInputStream());
+            // PING định kỳ như client thật, nếu không server ngắt sau DISCONNECT_TIMEOUT_S khi client chỉ đọc
+            Thread heartbeat = new Thread(() -> {
+                try {
+                    while (!socket.isClosed()) {
+                        Thread.sleep(GameConfig.HEARTBEAT_S * 1000L);
+                        send(Message.of(MessageType.PING));
+                    }
+                } catch (Exception ignored) {
+                    // socket đã đóng hoặc test kết thúc
+                }
+            }, "heartbeat");
+            heartbeat.setDaemon(true);
+            heartbeat.start();
         }
 
-        void send(Message m) throws IOException {
+        synchronized void send(Message m) throws IOException {
             out.writeObject(m);
             out.reset();
             out.flush();
