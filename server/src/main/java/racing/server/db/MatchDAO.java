@@ -2,12 +2,17 @@ package racing.server.db;
 
 import racing.common.GameConfig;
 import racing.common.dto.EndReason;
+import racing.common.dto.MatchOutcome;
+import racing.common.dto.MatchRow;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.sql.Timestamp;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Truy cập bảng matches và match_events. {@link #saveResult} chạy trong một transaction:
@@ -118,6 +123,47 @@ public class MatchDAO {
         p.setInt(3, loss);
         p.setInt(4, draw);
         p.setInt(5, playerId);
+    }
+
+    /**
+     * Lịch sử trận của một người chơi (M4): các trận đã kết thúc, mới nhất trước, kèm tên đối thủ
+     * và kết quả theo góc nhìn của người đó.
+     */
+    public List<MatchRow> findRecentByPlayer(int playerId, int limit) throws SQLException {
+        String sql = "SELECT m.match_id, m.winner_id, m.end_reason, m.started_at, m.ended_at, "
+                + "CASE WHEN m.player1_id = ? THEN p2.username ELSE p1.username END AS opponent "
+                + "FROM matches m "
+                + "JOIN players p1 ON p1.player_id = m.player1_id "
+                + "JOIN players p2 ON p2.player_id = m.player2_id "
+                + "WHERE (m.player1_id = ? OR m.player2_id = ?) AND m.status <> 'PLAYING' "
+                + "ORDER BY m.started_at DESC, m.match_id DESC LIMIT ?";
+        List<MatchRow> rows = new ArrayList<>();
+        try (Connection c = DbConnection.get();
+             PreparedStatement ps = c.prepareStatement(sql)) {
+            ps.setInt(1, playerId);
+            ps.setInt(2, playerId);
+            ps.setInt(3, playerId);
+            ps.setInt(4, limit);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    int winner = rs.getInt("winner_id");
+                    boolean noWinner = rs.wasNull();
+                    String reasonName = rs.getString("end_reason");
+                    EndReason reason = reasonName == null ? EndReason.ABORTED : EndReason.valueOf(reasonName);
+                    MatchOutcome outcome;
+                    if (noWinner) {
+                        outcome = reason == EndReason.DRAW ? MatchOutcome.DRAW : MatchOutcome.ABORTED;
+                    } else {
+                        outcome = winner == playerId ? MatchOutcome.WIN : MatchOutcome.LOSE;
+                    }
+                    Timestamp started = rs.getTimestamp("started_at");
+                    Timestamp ended = rs.getTimestamp("ended_at");
+                    rows.add(new MatchRow(rs.getInt("match_id"), rs.getString("opponent"), outcome, reason,
+                            started == null ? 0 : started.getTime(), ended == null ? 0 : ended.getTime()));
+                }
+            }
+        }
+        return rows;
     }
 
     /** Ghi một sự kiện trong trận. payloadJson có thể null; nếu có phải là JSON hợp lệ (MySQL kiểm tra). */
