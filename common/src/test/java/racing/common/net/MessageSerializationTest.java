@@ -10,6 +10,7 @@ import racing.common.dto.LoginRequest;
 import racing.common.dto.LoginResult;
 import racing.common.dto.MatchOutcome;
 import racing.common.dto.MatchResult;
+import racing.common.dto.MatchRow;
 import racing.common.dto.MatchStart;
 import racing.common.dto.Obstacle;
 import racing.common.dto.PlayerInfo;
@@ -112,6 +113,20 @@ class MessageSerializationTest {
         RankRow row = roundTrip(new Message(MessageType.LEADERBOARD, List.of(new RankRow(1, "bob", 15, 12, 4, 3))))
                 .<List<RankRow>>getPayload().get(0);
         assertEquals(1, row.rank());
+    }
+
+    @Test
+    void registerAndHistoryRoundTrip() throws Exception {
+        LoginRequest reg = roundTrip(new Message(MessageType.REGISTER, new LoginRequest("new_user", "pw"))).getPayload();
+        assertEquals("new_user", reg.username());
+        LoginResult res = roundTrip(new Message(MessageType.REGISTER_RESULT, LoginResult.fail("Tên đã tồn tại"))).getPayload();
+        assertEquals(false, res.ok());
+        List<MatchRow> history = roundTrip(new Message(MessageType.MATCH_HISTORY, List.of(
+                new MatchRow(42, "bob", MatchOutcome.WIN, EndReason.FINISH, 1_700_000_000_000L, 1_700_000_041_000L),
+                new MatchRow(43, "carol", MatchOutcome.ABORTED, null, 1_700_000_100_000L, 0L)))).getPayload();
+        assertEquals(2, history.size());
+        assertEquals("bob", history.get(0).opponentUsername());
+        assertNull(history.get(1).reason());
     }
 
     @Test

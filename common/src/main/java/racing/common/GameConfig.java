@@ -59,6 +59,9 @@ public final class GameConfig {
     /** Số dòng tối đa của bảng xếp hạng gửi về client. */
     public static final int LEADERBOARD_LIMIT = 100;
 
+    /** Số trận gần nhất trong lịch sử trận gửi về client. */
+    public static final int HISTORY_LIMIT = 20;
+
     /**
      * Quy đổi km/h sang m/s để tính quãng đường đi được trong một tick:
      * distance += speedKmh * KMH_TO_MS * (TICK_MS / 1000.0)

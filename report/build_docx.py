@@ -11,7 +11,8 @@ from docx.oxml import OxmlElement
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 IMG = os.path.join(HERE, "img")
-OUT = os.path.join(HERE, "LTM_Nhom_GameDuaXe_Java.docx")
+import sys
+OUT = sys.argv[1] if len(sys.argv) > 1 else os.path.join(HERE, "LTM_Nhom_GameDuaXe_Java.docx")
 
 FONT = "Times New Roman"
 BODY_PT = 13
@@ -308,8 +309,8 @@ set_font(p.add_run("Lớp: LTM-2026-2-N01 · Ngôn ngữ Java · TCP Socket · J
 table(["STT", "Thành viên", "Phần phụ trách"], [
     ["1", "Phạm Thị Thu Phương", "Server và kiến trúc (mục 4)"],
     ["2", "Vũ Văn Hiếu", "Client: đăng nhập, sảnh chờ, thách đấu (mục 5)"],
-    ["3", "Nguyễn Trần Mai Anh", "Giao diện màn hình đua (mục 6)"],
-    ["4", "Trần Việt Anh", "Cơ sở dữ liệu và bảng xếp hạng (mục 7)"],
+    ["3", "Nguyễn Trần Mai Anh", "Cơ sở dữ liệu và bảng xếp hạng (mục 7)"],
+    ["4", "Trần Việt Anh", "Giao diện màn hình đua (mục 6)"],
 ], [0.6, 2.2, 3.47], caption="Danh sách thành viên nhóm", align_center_cols=(0,))
 
 # ================================================================ 1. BÀI TOÁN
@@ -568,8 +569,8 @@ para("Điểm quan trọng là thời hạn 30 giây được tính tại server
      "sau khi server đã hủy, server trả INVITE_RESULT(TIMEOUT) và client hiển thị thông báo lời mời đã hết hạn.")
 
 # ================================================================ 6. CÁ NHÂN 3
-heading("6. Phần cá nhân 3 – Giao diện màn hình đua (Nguyễn Trần Mai Anh)")
-para("Nguyễn Trần Mai Anh (thành viên 3) thực hiện giao diện đua. Màn hình chia thành hai đường đua song song: bên trái là xe của "
+heading("6. Phần cá nhân 3 – Giao diện màn hình đua (Trần Việt Anh)")
+para("Trần Việt Anh (thành viên 3) thực hiện giao diện đua. Màn hình chia thành hai đường đua song song: bên trái là xe của "
      "người chơi, bên phải là xe đối thủ. Mỗi đường đua dài 1000 m (quy đổi ra pixel khi vẽ) và chia thành ba làn "
      "để xe có thể né chướng ngại vật; hai đường đua nhận cùng danh sách chướng ngại vật từ MATCH_START nên hoàn "
      "toàn giống nhau. Người chơi chỉ điều khiển xe của mình; dữ liệu xe đối thủ do server đồng bộ qua RACE_UPDATE.")
@@ -613,8 +614,8 @@ code([
 ])
 
 # ================================================================ 7. CÁ NHÂN 4
-heading("7. Phần cá nhân 4 – Cơ sở dữ liệu và bảng xếp hạng (Trần Việt Anh)")
-para("Trần Việt Anh (thành viên 4) thực hiện thiết kế dữ liệu và bảng xếp hạng. Khi trận kết thúc, server lưu kết quả vào bảng "
+heading("7. Phần cá nhân 4 – Cơ sở dữ liệu và bảng xếp hạng (Nguyễn Trần Mai Anh)")
+para("Nguyễn Trần Mai Anh (thành viên 4) thực hiện thiết kế dữ liệu và bảng xếp hạng. Khi trận kết thúc, server lưu kết quả vào bảng "
      "matches, ghi các sự kiện quan trọng vào match_events và cập nhật điểm, số trận thắng, thua, hòa trong bảng "
      "players. Bảng xếp hạng được lấy trực tiếp từ players, sắp xếp theo tổng điểm giảm dần rồi tổng số trận thắng "
      "giảm dần (YC12).")
@@ -716,8 +717,8 @@ heading("8. Phân công công việc")
 table(["Thành viên", "Phần phụ trách", "Sản phẩm bàn giao"], [
     ["Phạm Thị Thu Phương", "Server và kiến trúc (mục 4)", "GameServer, ClientHandler, SessionManager, InviteManager, RoomManager, MatchService; module common (Message, DTO)."],
     ["Vũ Văn Hiếu", "Client: đăng nhập, sảnh, thách đấu (mục 5)", "LoginFrame, LobbyFrame, InviteDialog, LeaderboardFrame, NetworkClient, ClientState."],
-    ["Nguyễn Trần Mai Anh", "Giao diện màn hình đua (mục 6)", "RaceFrame, RacePanel, CarModel, xử lý phím, vòng lặp 50 ms, hiệu chỉnh theo RACE_UPDATE."],
-    ["Trần Việt Anh", "CSDL và bảng xếp hạng (mục 7)", "Script schema.sql, DbConnection, PlayerDAO, MatchDAO, dữ liệu mẫu, truy vấn xếp hạng."],
+    ["Trần Việt Anh", "Giao diện màn hình đua (mục 6)", "RaceFrame, RacePanel, CarModel, xử lý phím, vòng lặp 50 ms, hiệu chỉnh theo RACE_UPDATE."],
+    ["Nguyễn Trần Mai Anh", "CSDL và bảng xếp hạng (mục 7)", "Script schema.sql, DbConnection, PlayerDAO, MatchDAO, dữ liệu mẫu, truy vấn xếp hạng."],
     ["Cả nhóm", "Tích hợp và kiểm thử", "Chạy 3 client cùng lúc trên 2 máy, kiểm thử các tình huống ở Bảng 7, viết báo cáo."],
 ], [1.6, 1.9, 2.77], caption="Phân công công việc trong nhóm", first_col_bold=True)
 

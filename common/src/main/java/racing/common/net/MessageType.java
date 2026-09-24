@@ -49,11 +49,21 @@ public enum MessageType {
     /** S→C  Integer roomId – phòng đã đóng, client quay về sảnh */
     ROOM_CLOSED,
 
-    // ---- Bảng xếp hạng
+    // ---- Tài khoản
+    /** C→S  LoginRequest – đăng ký tài khoản mới (username, password) */
+    REGISTER,
+    /** S→C  LoginResult – ok = true khi tạo được; message báo lỗi khi trùng tên hoặc dữ liệu không hợp lệ */
+    REGISTER_RESULT,
+
+    // ---- Bảng xếp hạng và lịch sử
     /** C→S  null */
     LEADERBOARD_REQ,
     /** S→C  List&lt;RankRow&gt; */
     LEADERBOARD,
+    /** C→S  null – lịch sử trận của chính người gửi */
+    MATCH_HISTORY_REQ,
+    /** S→C  List&lt;MatchRow&gt; – mới nhất trước, tối đa GameConfig.HISTORY_LIMIT dòng */
+    MATCH_HISTORY,
 
     // ---- Heartbeat
     /** C→S  null – mỗi HEARTBEAT_S giây */

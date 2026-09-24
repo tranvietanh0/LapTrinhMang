@@ -1,6 +1,6 @@
 # Kế hoạch kiểm thử tích hợp (D6)
 
-Chạy ở tuần 3 và 4, sau mốc M3. Mỗi kịch bản ghi kết quả PASS / FAIL, ngày chạy, người chạy và link Issue nếu FAIL.
+Chạy ở tuần 3 và 4, sau mốc M3. Mỗi kịch bản ghi kết quả PASS / FAIL, ngày chạy, người chạy và link Issue nếu FAIL. Cột "Kiểm tra DB" do Mai Anh xác nhận bằng câu SQL bên dưới sau mỗi kịch bản.
 
 ## Chuẩn bị
 
@@ -35,17 +35,19 @@ java -jar tools/target/racing-tools.jar "login alice 123456; wait LOGIN_RESULT; 
 | T4 | Mời người đang thi đấu | `alice` và `bob` đang đua; `carol` bấm Thách đấu `alice` | `carol` nhận thông báo BUSY; `alice` không thấy hộp thoại nào | không | Hiếu | | |
 | T5 | Không trả lời lời mời 30 s | `alice` mời `bob`; `bob` không bấm gì | Sau 30 s hộp thoại ở `bob` tự đóng; `alice` nhận TIMEOUT; cả hai vẫn Rảnh trong danh sách | không | Hiếu | | |
 | T6 | Từ chối lời mời | `alice` mời `bob`; `bob` bấm Từ chối | `alice` nhận REJECTED; cả hai vẫn Rảnh | không | Hiếu | | |
-| T7 | Chấp nhận, đếm ngược, đua | `bob` bấm Chấp nhận | Cả hai chuyển sang màn hình đua, thấy 3-2-1-GO; bấm phím trước GO không có tác dụng; sau GO xe chạy | `matches` có dòng mới status PLAYING | Mai Anh | | |
-| T8 | Va chạm chướng ngại vật | Lái xe vào ô chướng ngại vật | Tốc độ về 0 trong 1 s, xe nháy đỏ trên cả hai màn hình cùng lúc | `match_events` có COLLISION | Mai Anh | | |
+| T7 | Chấp nhận, đếm ngược, đua | `bob` bấm Chấp nhận | Cả hai chuyển sang màn hình đua, thấy 3-2-1-GO; bấm phím trước GO không có tác dụng; sau GO xe chạy | `matches` có dòng mới status PLAYING | Việt Anh | | |
+| T8 | Va chạm chướng ngại vật | Lái xe vào ô chướng ngại vật | Tốc độ về 0 trong 1 s, xe nháy đỏ trên cả hai màn hình cùng lúc | `match_events` có COLLISION | Việt Anh | | |
 | T9 | Về đích trước | `alice` về đích trước `bob` | Cả hai thấy kết quả; `alice` thắng | `alice` +1 điểm +1 thắng, `bob` +1 thua; `end_reason = FINISH`, `winner_id` = alice | Việt Anh | | |
 | T10 | Về đích cùng tick | Chạy `t10-draw-b.txt` rồi `t10-draw-a.txt` bằng racing-tools (cùng tốc độ 200, cùng lúc GO) | Cả hai nhận MATCH_RESULT outcome DRAW | Mỗi người +1 điểm +1 hòa; `winner_id NULL`; `end_reason = DRAW` | Việt Anh | | Nếu lệch 1 tick thì 1 người thắng: chạy lại 3 lần, phải có ít nhất 1 lần hòa |
-| T11 | Bấm Thoát trận giữa chừng | Đang đua, `alice` bấm Thoát trận và xác nhận | `bob` thấy thông báo đối thủ đã thoát và mình thắng; `alice` về sảnh | `alice` +1 thua, `bob` +1 điểm; `end_reason = QUIT` | Mai Anh | | |
+| T11 | Bấm Thoát trận giữa chừng | Đang đua, `alice` bấm Thoát trận và xác nhận | `bob` thấy thông báo đối thủ đã thoát và mình thắng; `alice` về sảnh | `alice` +1 thua, `bob` +1 điểm; `end_reason = QUIT` | Việt Anh | | |
 | T12 | Rút mạng client đang đua | Đang đua, tắt Wi-Fi hoặc kill tiến trình client của `alice` | Trong ≤ 15 s `bob` nhận thắng và về sảnh; danh sách online không còn `alice` | `end_reason = DISCONNECT`, `winner_id` = bob | Việt Anh | | Ghi thời gian từ lúc rút mạng đến lúc `bob` nhận kết quả |
-| T13 | Cả hai đồng ý thi đấu tiếp | Sau MATCH_RESULT cả hai bấm Đồng ý | Ván mới trong cùng phòng: chướng ngại vật khác, quãng đường về 0, đếm ngược lại | `matches` có dòng mới với cùng `room_code` | Mai Anh | | |
+| T13 | Cả hai đồng ý thi đấu tiếp | Sau MATCH_RESULT cả hai bấm Đồng ý | Ván mới trong cùng phòng: chướng ngại vật khác, quãng đường về 0, đếm ngược lại | `matches` có dòng mới với cùng `room_code` | Việt Anh | | |
 | T14 | Một bên từ chối thi đấu tiếp | `alice` Đồng ý, `bob` Từ chối | Cả hai về sảnh, trạng thái Rảnh | không | Hiếu | | |
 | T15 | 2 phòng đua cùng lúc | 4 client (`alice`+`bob`, `carol`+`dave`) đua song song; có thể dùng racing-tools cho 2 client | Không lẫn RACE_UPDATE giữa phòng; hai kết quả độc lập | 2 dòng `matches` với `room_code` khác nhau | Việt Anh | | |
 | T16 | Tắt server khi client ở sảnh | Tắt server | Client báo mất kết nối, về màn đăng nhập, không treo | không | Hiếu | | |
 | T17 | Gửi CAR_STATE tốc độ 999 | Chạy `t17-speed-cheat.txt` với đối thủ thật | RACE_UPDATE trả về `speed ≤ 200`; client gian lận không về đích nhanh hơn xe 200 km/h | `matches` không có kết quả bất thường | Việt Anh | | |
+| T18 | Đăng ký tài khoản | Bấm Đăng ký, tạo `test1`; đăng nhập `test1`; đăng ký lại `test1` | Vào sảnh được; lần hai báo trùng tên | `players` có dòng `test1`, `password_hash` bắt đầu bằng `sha256$` | Mai Anh | | |
+| T19 | Lịch sử trận | Sau T9, T10, T11 mở Lịch sử của `alice` | 3 dòng, đúng đối thủ, kết quả và lý do | so với `SELECT ... FROM matches WHERE player1_id = ... OR player2_id = ...` | Mai Anh | | |
 
 ## Mẫu ghi Issue khi FAIL
 

@@ -10,9 +10,9 @@ Bài tập lớn môn Lập trình mạng, lớp LTM-2026-2-N01. Client Java Swi
 | Module | Nội dung | Phụ trách |
 |---|---|---|
 | `common` | `Message`, `MessageType`, DTO, `GameConfig` dùng chung | Trần Việt Anh |
-| `server` | `GameServer`, `ClientHandler`, các manager, `db/` (DAO) | Phạm Thị Thu Phương (server), Trần Việt Anh (`db/`) |
-| `client` | `NetworkClient`, sảnh, màn hình đua | Vũ Văn Hiếu (sảnh), Nguyễn Trần Mai Anh (đua) |
-| `db/` | `schema.sql`, `seed.sql`, `reset-db.sql` | Trần Việt Anh |
+| `server` | `GameServer`, `ClientHandler`, các manager, `db/` (DAO) | Phạm Thị Thu Phương (server), Trần Việt Anh (`db/` nền), Nguyễn Trần Mai Anh (lịch sử trận, sự kiện) |
+| `client` | `NetworkClient`, sảnh, màn hình đua, xếp hạng, đăng ký, lịch sử | Vũ Văn Hiếu (sảnh), Trần Việt Anh (đua), Nguyễn Trần Mai Anh (xếp hạng, đăng ký, lịch sử) |
+| `db/` | `schema.sql`, `seed.sql`, `reset-db.sql`, `docs/DB.md` | Trần Việt Anh (schema), Nguyễn Trần Mai Anh (DB.md, truy vấn) |
 | `tools` | `ScriptedClient`: client dòng lệnh nói giao thức để test server và chạy kịch bản T10, T17 | Trần Việt Anh |
 | `docs/` | `TEST-PLAN.md`: 17 kịch bản kiểm thử tích hợp | Trần Việt Anh |
 
