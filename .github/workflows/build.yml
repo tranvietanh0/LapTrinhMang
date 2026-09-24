@@ -32,10 +32,21 @@ jobs:
           distribution: temurin
           java-version: "17"
           cache: maven
+      # Healthcheck của image MySQL đi qua socket và có thể "healthy" khi entrypoint còn đang
+      # khởi tạo (server tạm chưa nghe TCP), nên phải chờ kết nối TCP thật sự trước khi nạp schema.
+      - name: Wait for MySQL over TCP
+        run: |
+          for i in $(seq 1 30); do
+            if mysqladmin ping --protocol=tcp -h 127.0.0.1 -P 3306 -uroot -proot --silent 2>/dev/null; then
+              echo "MySQL ready after $i attempt(s)"; exit 0
+            fi
+            sleep 2
+          done
+          echo "MySQL not reachable over TCP after 60 s"; exit 1
       - name: Load schema and seed
         run: |
-          mysql -h 127.0.0.1 -uroot -proot < db/schema.sql
-          mysql -h 127.0.0.1 -uroot -proot racing < db/seed.sql
+          mysql --protocol=tcp -h 127.0.0.1 -uroot -proot < db/schema.sql
+          mysql --protocol=tcp -h 127.0.0.1 -uroot -proot racing < db/seed.sql
       - name: Build and test (unit + DAO integration)
         env:
           RACING_TEST_DB_URL: jdbc:mysql://127.0.0.1:3306/racing
