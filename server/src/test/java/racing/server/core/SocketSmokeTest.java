@@ -103,6 +103,9 @@ class SocketSmokeTest {
 
             b.send(new Message(MessageType.LOGIN, new LoginRequest("bob", "123456")));
             assertTrue(((LoginResult) b.await(MessageType.LOGIN_RESULT).getPayload()).ok());
+            // sảnh mở sau LOGIN_RESULT: người vào sau vẫn phải nhận danh sách đủ cả hai
+            List<PlayerInfo> bList = b.await(MessageType.ONLINE_LIST).getPayload();
+            assertEquals(List.of("alice", "bob"), bList.stream().map(PlayerInfo::username).toList());
             List<PlayerInfo> list = a.await(MessageType.ONLINE_LIST).getPayload();
             while (list.size() < 2) {
                 list = a.await(MessageType.ONLINE_LIST).getPayload();

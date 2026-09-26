@@ -127,6 +127,11 @@ public final class ClientHandler implements Runnable, PlayerConnection {
             session = services.sessions().find(r.me().username()).orElse(null);
         }
         send(new Message(MessageType.LOGIN_RESULT, r));
+        if (r.ok()) {
+            // ONLINE_LIST phát trong login() tới trước LOGIN_RESULT, lúc client chưa mở sảnh nên bỏ qua;
+            // gửi lại sau LOGIN_RESULT để sảnh của người vừa vào có danh sách ngay
+            send(new Message(MessageType.ONLINE_LIST, services.sessions().onlineList()));
+        }
     }
 
     private interface DbQuery {
