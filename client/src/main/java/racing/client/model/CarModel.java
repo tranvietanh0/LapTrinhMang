@@ -62,7 +62,23 @@ public final class CarModel {
         }
     }
 
-    /** Ghi đè bằng trạng thái server xác nhận. Trả về true nếu server báo vừa bị va chạm (để nháy đỏ). */
+    /**
+     * Xe của mình: server quyết định quãng đường, va chạm, về đích; làn và tốc độ giữ theo phím
+     * (server chỉ cắt ngưỡng). RACE_UPDATE được tính trước khi server nhận CAR_STATE mới nhất,
+     * nên nếu ghi đè làn thì lần đổi làn vừa bấm bị bật ngược và mất. Trả về true nếu vừa bị va chạm.
+     */
+    public boolean applyServerOwn(CarSnapshot s) {
+        boolean newlyStunned = s.stunned() && !stunned;
+        distance = s.distance();
+        stunned = s.stunned();
+        finished = s.finished();
+        if (stunned) {
+            speed = 0;
+        }
+        return newlyStunned;
+    }
+
+    /** Xe đối thủ: ghi đè toàn bộ theo server. Trả về true nếu server báo vừa bị va chạm (để nháy đỏ). */
     public boolean applyServer(CarSnapshot s) {
         boolean newlyStunned = s.stunned() && !stunned;
         distance = s.distance();

@@ -87,6 +87,22 @@ class CarModelTest {
     }
 
     @Test
+    void ownCarKeepsLocalLaneAndSpeedWhenServerUpdateIsOneTickBehind() {
+        CarModel car = new CarModel("alice", 1);
+        car.setThrottle(true);
+        run(car, 1);
+        car.laneRight();                                   // bấm D: sang làn 2
+        double speed = car.speed();
+        // RACE_UPDATE tính trước khi server nhận CAR_STATE mới: vẫn làn 1, tốc độ cũ
+        assertFalse(car.applyServerOwn(new CarSnapshot("alice", 40, 1, speed - 6, false, false)));
+        assertEquals(2, car.lane(), "đổi làn không được bật ngược");
+        assertEquals(speed, car.speed());
+        assertEquals(40, car.distance(), "quãng đường theo server");
+        assertTrue(car.applyServerOwn(new CarSnapshot("alice", 41, 2, 0, true, false)));
+        assertEquals(0, car.speed(), "va chạm do server quyết định");
+    }
+
+    @Test
     void stunnedCarDoesNotMoveOrAccelerate() {
         CarModel car = new CarModel("alice", 1);
         car.applyServer(new CarSnapshot("alice", 50, 1, 0, true, false));

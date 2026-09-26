@@ -159,7 +159,7 @@ public final class RaceFrame extends JFrame {
             return;
         }
         panel.setRaceTick(s.tick());
-        if (myCar.applyServer(s.me())) {
+        if (myCar.applyServerOwn(s.me())) {
             panel.flashMine();
         }
         if (opponentCar.applyServer(s.opponent())) {
