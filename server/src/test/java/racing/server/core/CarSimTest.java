@@ -96,6 +96,40 @@ class CarSimTest {
     }
 
     @Test
+    void movingTrafficIsHitAtItsMovedPositionNotItsStartPosition() {
+        // xe cộ làn 0 bắt đầu ở 30 m, chạy 100 km/h; xe mình đứng yên 40 tick (2 s) ở cùng làn
+        Obstacle traffic = new Obstacle(0, 30, 100, 0);
+        List<Obstacle> obs = List.of(traffic);
+        CarSim car = new CarSim("alice", 0);
+        long now = 0;
+        long tick = 0;
+        for (int i = 0; i < 40; i++) {
+            now += GameConfig.TICK_MS;
+            assertNull(car.advance(now, ++tick, obs));
+        }
+        assertTrue(traffic.positionAt(tick) > 80, "xe cộ đã chạy khỏi vị trí 30 m");
+
+        // tăng tốc 200 km/h: chạy xuyên qua vùng 30..50 m (vị trí lúc GO) mà không va chạm
+        car.applyClient(new CarState(0, 0, 200), now);
+        Obstacle hit = null;
+        while (hit == null && car.distance() < 60) {
+            now += GameConfig.TICK_MS;
+            hit = car.advance(now, ++tick, obs);
+        }
+        assertNull(hit, "không va chạm ở vị trí lúc GO của xe cộ");
+
+        // đuổi kịp (200 > 100 km/h): va chạm xảy ra đúng lúc hai xe chồng nhau ở vị trí đã di chuyển
+        while (hit == null && tick < 400) {
+            now += GameConfig.TICK_MS;
+            hit = car.advance(now, ++tick, obs);
+        }
+        assertNotNull(hit, "phải đuổi kịp và đâm xe cộ");
+        double at = traffic.positionAt(tick);
+        assertTrue(car.distance() < at + GameConfig.OBSTACLE_LENGTH && at < car.distance() + GameConfig.CAR_LENGTH);
+        assertTrue(at > 100, "va chạm ở vị trí đã di chuyển, không phải 30 m");
+    }
+
+    @Test
     void noCollisionOnDifferentLane() {
         CarSim car = new CarSim("alice", 2);
         List<Obstacle> obs = List.of(new Obstacle(0, 30), new Obstacle(1, 60));

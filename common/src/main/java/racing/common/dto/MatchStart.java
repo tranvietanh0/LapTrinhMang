@@ -11,7 +11,7 @@ import java.util.List;
  * @param me          thông tin người nhận
  * @param opponent    thông tin đối thủ
  * @param trackLength chiều dài đường đua (mét), bằng GameConfig.TRACK_LENGTH
- * @param obstacles   danh sách chướng ngại vật, giống nhau cho cả hai
+ * @param obstacles   danh sách xe cộ (chướng ngại vật chạy cùng chiều), giống nhau cho cả hai
  */
 public record MatchStart(int roomId, int matchId, PlayerInfo me, PlayerInfo opponent,
                          double trackLength, List<Obstacle> obstacles) implements Serializable {

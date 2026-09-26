@@ -1,5 +1,7 @@
 package racing.common;
 
+import java.util.List;
+
 /**
  * Hằng số dùng chung cho client và server. Đây là "hợp đồng chung" của nhóm:
  * đổi giá trị ở đây phải báo cả nhóm vì ảnh hưởng cả ba module.
@@ -45,8 +47,20 @@ public final class GameConfig {
     /** Sau va chạm tốc độ về 0 trong khoảng này (mili giây). */
     public static final int COLLISION_STUN_MS = 1000;
 
-    /** Số chướng ngại vật trên mỗi đường đua. */
-    public static final int OBSTACLE_COUNT = 8;
+    /**
+     * Số xe cộ (chướng ngại vật) trên mỗi đường đua, chia đều cho các làn. Xe cộ chạy cùng chiều
+     * nên cần nhiều hơn vật đứng yên để người chơi luôn phải né.
+     */
+    public static final int OBSTACLE_COUNT = 18;
+
+    /**
+     * Tốc độ (km/h) của xe cộ, mỗi làn nhận một giá trị (xáo theo seed). Cùng làn cùng tốc độ nên
+     * xe cộ trong một làn không bao giờ chồng lên nhau. Số phần tử phải bằng LANES, nhỏ hơn MAX_SPEED.
+     */
+    public static final List<Double> TRAFFIC_SPEEDS = List.of(70.0, 100.0, 130.0);
+
+    /** Số kiểu xe cộ để client chọn hình vẽ (kind 0..TRAFFIC_KINDS-1). */
+    public static final int TRAFFIC_KINDS = 6;
 
     /** Chiều dài (mét) của một chướng ngại vật và của xe, dùng khi xét va chạm. */
     public static final double OBSTACLE_LENGTH = 20.0;
