@@ -105,7 +105,7 @@ public final class Room {
             Obstacle hit = p.car.advance(now, tick, obstacles);
             if (hit != null) {
                 matches.event(matchId, p.session, "COLLISION", "{\"lane\":" + hit.lane() + ",\"distance\":"
-                        + Math.round(p.car.distance()) + ",\"obstacle\":" + Math.round(hit.position()) + "}");
+                        + Math.round(p.car.distance()) + ",\"obstacle\":" + Math.round(hit.positionAt(tick)) + "}");
             }
         }
         long elapsed = now - raceStartMillis;

@@ -78,7 +78,7 @@ public final class CarSim {
         }
         for (int i = 0; i < obstacles.size(); i++) {
             Obstacle o = obstacles.get(i);
-            if (o.lane() == lane && !hitObstacles.contains(i) && overlaps(o)) {
+            if (o.lane() == lane && !hitObstacles.contains(i) && overlaps(o.positionAt(tick))) {
                 hitObstacles.add(i);
                 stunUntil = now + GameConfig.COLLISION_STUN_MS;
                 speed = 0;
@@ -88,10 +88,11 @@ public final class CarSim {
         return null;
     }
 
-    private boolean overlaps(Obstacle o) {
+    /** Xe mình [distance, distance + CAR_LENGTH) chồng lên xe cộ đang ở {@code obsStart}. */
+    private boolean overlaps(double obsStart) {
         double carEnd = distance + GameConfig.CAR_LENGTH;
-        double obsEnd = o.position() + GameConfig.OBSTACLE_LENGTH;
-        return distance < obsEnd && o.position() < carEnd;
+        double obsEnd = obsStart + GameConfig.OBSTACLE_LENGTH;
+        return distance < obsEnd && obsStart < carEnd;
     }
 
     public CarSnapshot snapshot(long now) {

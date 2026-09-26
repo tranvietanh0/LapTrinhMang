@@ -52,7 +52,7 @@ Quy tắc cộng điểm (thực hiện trong một transaction ở `MatchDAO.sa
 | `event_time` | DATETIME(3) | Thời điểm, chính xác mili giây |
 | `payload` | JSON NULL | Dữ liệu kèm theo, ví dụ `{"lane":0,"distance":312,"obstacle":300}` |
 
-Payload theo loại: `START` `{"lane":1}` · `COLLISION` `{"lane","distance","obstacle"}` · `FINISH` `{"distance","elapsedMillis"}` · `QUIT`/`DISCONNECT` `{"distance"}` · `REMATCH` NULL.
+Payload theo loại: `START` `{"lane":1}` · `COLLISION` `{"lane","distance","obstacle"}` (`obstacle` = vị trí xe cộ lúc va chạm, vì xe cộ chạy cùng chiều) · `FINISH` `{"distance","elapsedMillis"}` · `QUIT`/`DISCONNECT` `{"distance"}` · `REMATCH` NULL.
 
 ## Truy vấn hay dùng
 
