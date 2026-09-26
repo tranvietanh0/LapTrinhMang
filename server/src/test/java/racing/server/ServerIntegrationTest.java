@@ -24,6 +24,9 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.Socket;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.TimeUnit;
 import java.sql.SQLException;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -40,11 +43,15 @@ class ServerIntegrationTest {
 
     private static GameServer server;
 
-    /** Client thô: đọc tuần tự, bỏ qua các loại không cần cho tới khi gặp loại mong đợi. */
+    /**
+     * Client thô: luồng nền đọc liên tục vào hàng đợi như client thật (client ngừng đọc sẽ bị
+     * server ngắt khi hàng đợi gửi đầy); await bỏ qua các loại không cần cho tới khi gặp loại mong đợi.
+     */
     private static final class RawClient implements AutoCloseable {
         final Socket socket;
         final ObjectOutputStream out;
         final ObjectInputStream in;
+        final BlockingQueue<Message> inbox = new LinkedBlockingQueue<>();
 
         RawClient(int port) throws IOException {
             socket = new Socket("127.0.0.1", port);
@@ -65,6 +72,17 @@ class ServerIntegrationTest {
             }, "heartbeat");
             heartbeat.setDaemon(true);
             heartbeat.start();
+            Thread reader = new Thread(() -> {
+                try {
+                    while (true) {
+                        inbox.add((Message) in.readObject());
+                    }
+                } catch (Exception ignored) {
+                    // socket đã đóng hoặc test kết thúc
+                }
+            }, "reader");
+            reader.setDaemon(true);
+            reader.start();
         }
 
         synchronized void send(Message m) throws IOException {
@@ -73,9 +91,12 @@ class ServerIntegrationTest {
             out.flush();
         }
 
-        Message await(MessageType type) throws IOException, ClassNotFoundException {
+        Message await(MessageType type) throws InterruptedException {
             while (true) {
-                Message m = (Message) in.readObject();
+                Message m = inbox.poll(60, TimeUnit.SECONDS);
+                if (m == null) {
+                    throw new AssertionError("không nhận được " + type + " trong 60 s");
+                }
                 if (m.getType() == type) {
                     return m;
                 }

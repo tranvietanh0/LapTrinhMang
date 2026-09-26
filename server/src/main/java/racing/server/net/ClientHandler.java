@@ -16,16 +16,25 @@ import java.io.ObjectOutputStream;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
 import java.sql.SQLException;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
 
 /**
  * Một luồng cho một client: vòng {@code readObject}, phân loại theo {@link MessageType} và
- * giao cho các manager. {@link #send} đồng bộ trên handler và gọi {@code reset()} sau mỗi
- * lần ghi để ObjectOutputStream không gửi lại bản cũ của DTO. Không nhận gì trong
+ * giao cho các manager. {@link #send} chỉ đưa thông điệp vào hàng đợi, một luồng ghi riêng
+ * cho mỗi client ghi ra socket và gọi {@code reset()} sau mỗi lần ghi để ObjectOutputStream
+ * không gửi lại bản cũ của DTO. Nhờ vậy luồng tick của phòng không bao giờ bị chặn bởi một
+ * client ngừng đọc (treo, rút mạng); hàng đợi đầy thì ngắt client đó. Không nhận gì trong
  * {@link GameConfig#DISCONNECT_TIMEOUT_S} giây (client PING mỗi 5 s) thì coi là mất kết nối.
  */
 public final class ClientHandler implements Runnable, PlayerConnection {
 
+    /** Khoảng 12 s RACE_UPDATE (20 tin/giây); client chậm hơn mức này coi như mất kết nối. */
+    static final int OUTBOX_CAPACITY = 256;
+
     private final Socket socket;
+    private final BlockingQueue<Message> outbox = new LinkedBlockingQueue<>(OUTBOX_CAPACITY);
+    private final Thread writer;
     private final ServerServices services;
     private final ObjectOutputStream out;
     private final ObjectInputStream in;
@@ -42,11 +51,14 @@ public final class ClientHandler implements Runnable, PlayerConnection {
         this.out = new ObjectOutputStream(socket.getOutputStream());
         this.out.flush();
         this.in = new ObjectInputStream(socket.getInputStream());
+        this.writer = new Thread(this::writeLoop, "writer-" + remote);
+        this.writer.setDaemon(true);
     }
 
     @Override
     public void run() {
         Log.info("kết nối mới " + remote);
+        writer.start();
         try {
             while (!closed) {
                 Object o = in.readObject();
@@ -148,32 +160,47 @@ public final class ClientHandler implements Runnable, PlayerConnection {
         closed = true;
         leaveEverything();
         session = null;
-        try {
-            socket.close();
-        } catch (IOException ignored) {
-            // socket đã đóng
-        }
+        closeSocket();
+        writer.interrupt();
         Log.info("đóng " + remote);
     }
 
+    /** Không chặn: gọi được từ luồng tick, luồng hẹn giờ lời mời hay luồng của client khác. */
     @Override
     public void send(Message message) {
-        if (closed) {
+        if (closed || socket.isClosed()) {
             return;
         }
-        synchronized (out) {
-            try {
-                out.writeObject(message);
+        if (!outbox.offer(message)) {
+            Log.info(who() + " không nhận kịp, hàng đợi gửi đầy " + OUTBOX_CAPACITY + " tin, ngắt kết nối");
+            closeSocket();
+        }
+    }
+
+    private void writeLoop() {
+        try {
+            while (!socket.isClosed()) {
+                Message m = outbox.take();
+                out.writeObject(m);
                 out.reset();
                 out.flush();
-            } catch (IOException e) {
-                Log.info("không gửi được tới " + who() + ": " + e.getMessage());
-                try {
-                    socket.close();          // làm vòng readObject thoát và cleanup
-                } catch (IOException ignored) {
-                    // đã đóng
-                }
             }
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        } catch (IOException e) {
+            if (!closed) {
+                Log.info("không gửi được tới " + who() + ": " + e.getMessage());
+            }
+            closeSocket();
+        }
+    }
+
+    /** Đóng socket làm vòng readObject thoát và gọi cleanup. */
+    private void closeSocket() {
+        try {
+            socket.close();
+        } catch (IOException ignored) {
+            // đã đóng
         }
     }
 
