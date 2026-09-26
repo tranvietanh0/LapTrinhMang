@@ -629,7 +629,7 @@ table(["Lớp", "Trách nhiệm chính"], [
     ["RacePanel", "Chia đôi màn hình, HUD, minimap, hộp đếm ngược, dòng trạng thái; Timer 16 ms vẽ lại."],
     ["TrackView", "Camera cuộn của một bên: nền cỏ và mặt đường, cảnh quan, vạch làn, START / FINISH, xe cộ, xe người chơi, vụ nổ."],
     ["PixelArt", "Dựng sẵn hình pixel (xe theo kind, cây, nhà, ao, vụ nổ, chữ pixel) vào bộ đệm ảnh để mỗi khung hình chỉ việc vẽ lại."],
-    ["CarModel", "Trạng thái một xe phía client: dự đoán cục bộ, hiệu chỉnh theo server (applyServer)."],
+    ["CarModel", "Trạng thái một xe phía client: dự đoán cục bộ; xe mình nhận quãng đường, va chạm, về đích từ server (applyServerOwn), xe đối thủ ghi đè toàn bộ (applyServer)."],
     ["ResultDialog, RematchDialog", "Hộp kết quả (thắng, thua, hòa, lý do, điểm mới) và hỏi thi đấu tiếp."],
     ["RaceDemo", "Chạy màn hình đua không cần server: giả lập đếm ngược, đối thủ tự lái, xe cộ chạy, va chạm, kết quả."],
 ], [1.75, 4.52], caption="Các lớp phía client (màn hình đua)", first_col_bold=True, size=11)
@@ -647,7 +647,9 @@ para("Phím tăng tốc và phanh là phím giữ: client ghi nhận lúc nhấn
      "hành), tốc độ đổi dần theo thời gian giữ chứ không theo số lần nhấn. Vòng lặp trò chơi ở client có hai "
      "nhịp. Timer 50 ms đổi tốc độ theo phím đang giữ, cập nhật quãng đường và gửi "
      "CAR_STATE lên server. Timer 16 ms (khoảng 60 khung hình mỗi giây) chỉ vẽ lại để đường cuộn mượt. Khi nhận "
-     "RACE_UPDATE, client ghi đè trạng thái cả hai xe theo server và lưu lại số tick; giữa hai lần cập nhật, "
+     "RACE_UPDATE, client lấy quãng đường, va chạm và về đích của xe mình theo server nhưng giữ làn và tốc độ theo "
+     "phím đang bấm (gói RACE_UPDATE được tính trước khi server nhận CAR_STATE mới nhất, nếu ghi đè làn thì lần "
+     "đổi làn vừa bấm sẽ bị bật ngược); xe đối thủ ghi đè toàn bộ theo server. Client lưu lại số tick; giữa hai lần cập nhật, "
      "TrackView nội suy thời gian để tính vị trí xe cộ bằng cùng công thức Obstacle.positionAt với server. Khi "
      "server báo xe vừa bị choáng, client tìm xe cộ cùng làn đang chồng lên xe mình, cho nó nổ và bỏ khỏi đường.")
 code([
@@ -655,7 +657,7 @@ code([
     "",
     "private void onRaceUpdate(RaceState s) {",
     "    panel.setRaceTick(s.tick());                  // mốc để vẽ xe cộ",
-    "    if (myCar.applyServer(s.me())) {              // server báo va chạm",
+    "    if (myCar.applyServerOwn(s.me())) {           // giữ làn, tốc độ; server báo va chạm",
     "        panel.flashMine();                        // nổ + nhấp nháy",
     "    }",
     "    if (opponentCar.applyServer(s.opponent())) {",
