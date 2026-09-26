@@ -307,10 +307,10 @@ p.alignment = WD_ALIGN_PARAGRAPH.CENTER
 p.paragraph_format.space_after = Pt(2)
 set_font(p.add_run("Lớp: LTM-2026-2-N01 · Ngôn ngữ Java · TCP Socket · Java Swing · MySQL (JDBC)"), italic=True, size=13)
 table(["STT", "Thành viên", "Phần phụ trách"], [
-    ["1", "Phạm Thị Thu Phương", "Server và kiến trúc (mục 4)"],
-    ["2", "Vũ Văn Hiếu", "Client: đăng nhập, sảnh chờ, thách đấu (mục 5)"],
-    ["3", "Nguyễn Trần Mai Anh", "Cơ sở dữ liệu và bảng xếp hạng (mục 7)"],
-    ["4", "Trần Việt Anh", "Giao diện màn hình đua (mục 6)"],
+    ["1", "Phạm Thị Thu Phương", "Server: kết nối, phiên, lời mời, phòng đua, trọng tài (mục 4; task S1–S7)"],
+    ["2", "Vũ Văn Hiếu", "Client sảnh: mạng phía client, đăng nhập, sảnh chờ, lời mời (mục 5; task C1–C7)"],
+    ["3", "Trần Việt Anh", "Nền tảng (Maven, common, schema, DAO, kiểm thử, đóng gói) và màn hình đua (mục 6; task D1–D7, R1–R6)"],
+    ["4", "Nguyễn Trần Mai Anh", "Dữ liệu SQL: bảng xếp hạng, đăng ký, lịch sử trận, ghi diễn biến (mục 7; task M1–M6)"],
 ], [0.6, 2.2, 3.47], caption="Danh sách thành viên nhóm", align_center_cols=(0,))
 
 # ================================================================ 1. BÀI TOÁN
@@ -328,7 +328,7 @@ table(["Mã", "Yêu cầu", "Mô tả chi tiết"], [
     ["YC03", "Thách đấu", "Người chơi click vào tên đối thủ đang Rảnh trong danh sách để gửi lời mời thách đấu."],
     ["YC04", "Phản hồi lời mời", "Người bị thách đấu chọn Chấp nhận (OK) hoặc Từ chối (Reject); sau 30 giây không phản hồi lời mời tự hủy."],
     ["YC05", "Tạo phòng đua", "Khi chấp nhận, hai người được đưa vào một phòng đua; server làm trọng tài; đếm ngược 3, 2, 1 trước khi bắt đầu."],
-    ["YC06", "Đường đua", "Mỗi người điều khiển một xe trên đường đua riêng có cùng chiều dài và chướng ngại vật giống nhau; hai đường đua hiển thị song song trên màn hình."],
+    ["YC06", "Đường đua", "Mỗi người điều khiển một xe trên đường đua riêng có cùng chiều dài và chướng ngại vật giống nhau; chướng ngại vật là các xe cộ chạy cùng chiều, người chơi phải đổi làn để vượt. Hai đường đua hiển thị song song trên màn hình."],
     ["YC07", "Điều khiển và đồng bộ", "Người chơi điều khiển xe bằng bàn phím; client liên tục gửi trạng thái xe lên server; server đồng bộ và cập nhật vị trí hai xe cho cả hai người chơi."],
     ["YC08", "Xác định kết quả", "Người về đích trước thắng: thắng 1 điểm, thua 0 điểm. Về đích cùng lúc tính hòa, mỗi người 1 điểm."],
     ["YC09", "Thi đấu tiếp", "Sau mỗi trận server hỏi hai người có muốn thi đấu tiếp; cả hai đồng ý thì tạo ván mới, một người từ chối thì kết thúc."],
@@ -364,9 +364,9 @@ table(["Thành phần trên hình", "Chức năng", "Mô tả"], [
 
 table(["Thành phần", "Công nghệ", "Ghi chú"], [
     ["Ngôn ngữ", "Java 17 (JDK 17 LTS)", "Build bằng Maven, hai module client và server dùng chung module common (Message, model)."],
-    ["Giao diện client", "Java Swing", "JFrame, JTable cho sảnh; JPanel tự vẽ (paintComponent) cho màn hình đua; javax.swing.Timer cho đếm ngược."],
+    ["Giao diện client", "Java Swing", "JFrame, JTable cho sảnh; JPanel tự vẽ bằng Java2D (paintComponent) cho màn hình đua kiểu game đua xe cổ điển nhìn từ trên xuống; javax.swing.Timer 50 ms cho vòng lặp và 16 ms cho vẽ lại."],
     ["Mạng", "java.net.Socket / ServerSocket", "TCP; ObjectInputStream / ObjectOutputStream; cổng mặc định 5000."],
-    ["Đa luồng", "Thread, ExecutorService", "Một luồng nhận cho mỗi client; ScheduledExecutorService cho tick trận đấu và hẹn giờ lời mời."],
+    ["Đa luồng", "Thread, ExecutorService", "Mỗi client một luồng nhận và một luồng ghi (hàng đợi gửi); ScheduledExecutorService cho tick trận đấu và hẹn giờ lời mời."],
     ["Cơ sở dữ liệu", "MySQL 8 + JDBC", "Driver mysql-connector-j; PreparedStatement; transaction khi lưu kết quả và cập nhật điểm."],
 ], [1.35, 1.9, 3.02], caption="Công nghệ sử dụng", first_col_bold=True)
 
@@ -377,7 +377,7 @@ para("Sau khi đăng nhập thành công, người chơi xem danh sách người
      "Đang thi đấu. Người chơi A chọn B để thách đấu. Server chuyển lời mời đến B và chờ tối đa 30 giây; B có thể "
      "chấp nhận hoặc từ chối, hết thời gian thì lời mời tự hủy và A được thông báo.")
 para("Nếu B chấp nhận, server tạo phòng đua, chuyển cả hai client sang màn hình đua và đếm ngược 3, 2, 1. Hai "
-     "người cùng thấy hai đường đua song song có cùng chiều dài và cùng bộ chướng ngại vật do server sinh ra. "
+     "người cùng thấy hai đường đua song song có cùng chiều dài và cùng một dòng xe cộ do server sinh ra theo seed. "
      "Trong lúc đua, client gửi trạng thái xe (vị trí, làn, tốc độ) lên server 20 lần mỗi giây; server kiểm tra "
      "hợp lệ, cập nhật vị trí hai xe rồi phát RACE_UPDATE cho cả hai. Khi một xe chạm vạch đích, server xác định "
      "kết quả, lưu vào CSDL, cập nhật điểm và hỏi hai bên có muốn thi đấu tiếp.")
@@ -405,15 +405,15 @@ code([
 table(["Loại thông điệp", "Hướng", "Dữ liệu kèm theo", "Ý nghĩa"], [
     ["LOGIN", "C → S", "username, password", "Yêu cầu đăng nhập (YC01)."],
     ["LOGIN_RESULT", "S → C", "ok, message, PlayerInfo", "Kết quả đăng nhập; kèm điểm hiện có nếu thành công."],
-    ["ONLINE_LIST", "S → C", "List<PlayerInfo>", "Danh sách online: tên, điểm, thắng, trạng thái (YC02). Gửi lại mỗi khi danh sách đổi."],
+    ["ONLINE_LIST", "S → C", "List<PlayerInfo>", "Danh sách online: tên, điểm, thắng, trạng thái (YC02). Gửi lại mỗi khi danh sách đổi và gửi riêng cho người vừa đăng nhập ngay sau LOGIN_RESULT."],
     ["INVITE", "C → S", "targetUsername", "A thách đấu B (YC03)."],
     ["INVITE_RECEIVED", "S → C", "fromUsername, inviteId", "Server chuyển lời mời tới B; B hiện hộp thoại 30 giây."],
     ["INVITE_REPLY", "C → S", "inviteId, accept", "B chấp nhận hoặc từ chối (YC04)."],
     ["INVITE_RESULT", "S → C", "inviteId, status", "Báo cho A: REJECTED, TIMEOUT hoặc BUSY."],
-    ["MATCH_START", "S → C", "roomId, opponent, trackSeed, obstacles", "Vào phòng đua; cả hai nhận cùng danh sách chướng ngại vật (YC05, YC06)."],
+    ["MATCH_START", "S → C", "roomId, opponent, trackSeed, obstacles", "Vào phòng đua; cả hai nhận cùng danh sách xe cộ, mỗi xe gồm làn, vị trí lúc xuất phát, tốc độ, kiểu xe (YC05, YC06)."],
     ["COUNTDOWN", "S → C", "value (3, 2, 1, 0)", "Đếm ngược; giá trị 0 nghĩa là bắt đầu đua."],
     ["CAR_STATE", "C → S", "distance, lane, speed", "Trạng thái xe của người chơi, gửi 20 lần/giây (YC07)."],
-    ["RACE_UPDATE", "S → C", "RaceState hai xe", "Vị trí, làn, tốc độ, quãng đường của cả hai xe do server đồng bộ."],
+    ["RACE_UPDATE", "S → C", "RaceState hai xe, tick", "Vị trí, làn, tốc độ, quãng đường của cả hai xe do server đồng bộ; tick dùng để client tính vị trí xe cộ."],
     ["FINISH", "C → S", "clientTime", "Client báo xe đã qua vạch đích; server đối chiếu quãng đường trước khi công nhận."],
     ["MATCH_RESULT", "S → C", "winner, reason, điểm mới", "Kết quả trận: WIN, LOSE hoặc DRAW cùng lý do (FINISH, DRAW, QUIT, DISCONNECT) (YC08)."],
     ["REMATCH_ASK", "S → C", "roomId", "Hỏi có thi đấu tiếp không (YC09)."],
@@ -430,9 +430,9 @@ para("Mỗi phòng đua (Room) tại server là một máy trạng thái. Phòng
      "đồng ý. Mọi chuyển trạng thái đều do server thực hiện nên hai client không thể lệch nhau.")
 figure("fig7_states.png", "Máy trạng thái của một phòng đua")
 table(["Trạng thái", "Điều kiện vào", "Server làm gì"], [
-    ["WAITING", "Lời mời được chấp nhận", "Tạo Room, đặt cả hai người chơi sang trạng thái Đang thi đấu, sinh danh sách chướng ngại vật, gửi MATCH_START."],
+    ["WAITING", "Lời mời được chấp nhận", "Tạo Room, đặt cả hai người chơi sang trạng thái Đang thi đấu, sinh danh sách xe cộ theo seed, gửi MATCH_START."],
     ["COUNTDOWN", "Cả hai client báo đã vào phòng", "Gửi COUNTDOWN 3, 2, 1 cách nhau 1 giây; chưa nhận CAR_STATE."],
-    ["RACING", "Đếm ngược về 0", "Chạy tick 50 ms: nhận CAR_STATE, kiểm tra hợp lệ, tính va chạm, phát RACE_UPDATE, ghi match_events."],
+    ["RACING", "Đếm ngược về 0", "Chạy tick 50 ms: nhận CAR_STATE, kiểm tra hợp lệ, tính va chạm với xe cộ tại vị trí của tick đó, phát RACE_UPDATE, ghi match_events."],
     ["FINISHED", "Về đích, hòa, thoát hoặc mất kết nối", "Chốt kết quả, lưu matches, cập nhật điểm, gửi MATCH_RESULT rồi REMATCH_ASK."],
     ["CLOSED", "Một bên từ chối hoặc rời phòng", "Trả hai người chơi về trạng thái Rảnh, phát lại ONLINE_LIST, hủy Room."],
 ], [1.35, 1.6, 3.32], caption="Các trạng thái của phòng đua", first_col_bold=True)
@@ -441,6 +441,13 @@ heading("3.4. Luật thắng thua và tính điểm", 2)
 para("Server là trọng tài duy nhất. Kết quả được xác định tại tick mà một xe có quãng đường lớn hơn hoặc bằng chiều "
      "dài đường đua. Nếu trong cùng một tick (50 ms) cả hai xe cùng đạt điều kiện thì tính hòa. Điểm được cộng "
      "trong một transaction cùng với việc lưu trận để tránh sai lệch khi có lỗi giữa chừng.")
+para("Chướng ngại vật là 48 xe cộ chạy cùng chiều, mỗi làn 16 xe. Mỗi làn nhận một tốc độ cố định lấy từ bộ "
+     "110, 160 và 210 km/h, xáo thứ tự theo seed của ván, nên các xe cùng làn không bao giờ đè lên nhau; xe của "
+     "người chơi chạy tối đa 360 km/h nên luôn vượt được. Vị trí một xe cộ ở tick k tính theo công thức "
+     "vị trí lúc xuất phát + tốc độ × k × 50 ms. Server (khi xét va chạm) và client (khi vẽ) cùng gọi "
+     "Obstacle.positionAt(tick) nên hai bên luôn khớp mà không phải gửi vị trí từng xe cộ qua mạng. Va chạm "
+     "được xét tại vị trí xe cộ đã di chuyển: cùng làn và chồng lên nhau thì tốc độ xe về 0 trong 1,5 giây. Mỗi "
+     "xe cộ chỉ bị đâm một lần; trên màn hình xe bị đâm nổ và biến mất.")
 table(["Tình huống", "Kết quả", "Điểm người A", "Điểm người B", "end_reason"], [
     ["A về đích trước B", "A thắng", "+1", "0", "FINISH"],
     ["A và B về đích trong cùng một tick", "Hòa", "+1", "+1", "DRAW"],
@@ -457,23 +464,24 @@ table(["Tình huống", "Xử lý của server"], [
     ["Một người thoát trận", "Gửi MATCH_RESULT cho đối thủ với reason = QUIT, xử người thoát thua, lưu trận, đóng phòng."],
     ["Mất kết nối quá timeout", "Không nhận PING trong 15 giây hoặc readObject ném IOException: xử thua, lưu end_reason = DISCONNECT, báo đối thủ."],
     ["Client gửi CAR_STATE bất thường", "Server giới hạn tốc độ tối đa và quãng đường tăng tối đa mỗi tick; giá trị vượt ngưỡng bị cắt về ngưỡng."],
-    ["Cả hai chọn thi đấu tiếp", "Tạo ván mới trong cùng phòng: sinh lại chướng ngại vật, đặt lại quãng đường bằng 0, đếm ngược lại."],
+    ["Cả hai chọn thi đấu tiếp", "Tạo ván mới trong cùng phòng: sinh lại dòng xe cộ với seed mới, đặt lại quãng đường bằng 0, đếm ngược lại."],
+    ["Một client ngừng nhận dữ liệu (treo, mạng nghẽn)", "Hàng đợi gửi của client đó đầy (256 thông điệp, khoảng 12 giây RACE_UPDATE) thì server ngắt kết nối và xử lý như mất kết nối; các phòng khác không bị ảnh hưởng."],
     ["Một trong hai từ chối thi đấu tiếp", "Đóng phòng, cả hai trở về sảnh với trạng thái Rảnh."],
 ], [2.0, 4.27], caption="Xử lý tình huống đặc biệt", first_col_bold=True)
 
 # ================================================================ 4. CÁ NHÂN 1
 heading("4. Phần cá nhân 1 – Server và kiến trúc (Phạm Thị Thu Phương)")
-para("Phạm Thị Thu Phương (thành viên 1) thực hiện phần server. Server nhận nhiều kết nối TCP, tạo ClientHandler cho từng client, quản "
+para("Phạm Thị Thu Phương (thành viên 1) thực hiện phần server (task S1–S7). Server nhận nhiều kết nối TCP, tạo ClientHandler cho từng client, quản "
      "lý danh sách online, lời mời, phòng đua và xác định kết quả trận đấu. Server đọc ghi dữ liệu với MySQL bằng "
      "JDBC thông qua lớp DAO. Toàn bộ trạng thái dùng chung (danh sách online, lời mời, phòng) được giữ trong các "
      "cấu trúc thread-safe để nhiều luồng ClientHandler truy cập đồng thời không gây lỗi.")
 figure("fig3_server.png", "Cấu trúc bên trong Game Server", width_in=6.0)
 table(["Thành phần trên hình", "Chức năng", "Mô tả"], [
     ["ServerSocket", "Nhận kết nối", "Mở cổng 5000, vòng lặp accept(); mỗi Socket mới được bọc trong một ClientHandler và giao cho ExecutorService."],
-    ["ClientHandler", "Xử lý từng client", "Luồng riêng đọc Message bằng ObjectInputStream, chuyển cho bộ xử lý theo type; gửi trả bằng ObjectOutputStream có synchronized."],
+    ["ClientHandler", "Xử lý từng client", "Luồng đọc Message bằng ObjectInputStream, chuyển cho bộ xử lý theo type. Gửi trả qua hàng đợi riêng (tối đa 256 thông điệp) và một luồng ghi ObjectOutputStream riêng, nên send() không bao giờ chặn."],
     ["SessionManager", "Người chơi online", "ConcurrentHashMap<username, ClientHandler>; trạng thái FREE / IN_MATCH; phát ONLINE_LIST khi có thay đổi; kiểm tra heartbeat."],
     ["InviteManager", "Lời mời thách đấu", "Lưu lời mời đang chờ, hẹn giờ 30 giây bằng ScheduledExecutorService, xử lý accept / reject / timeout."],
-    ["RoomManager / MatchService", "Trọng tài trận đấu", "Tạo Room, countdown, tick 50 ms, đồng bộ RACE_UPDATE, xét về đích, hòa, thoát, mất kết nối, hỏi thi đấu tiếp."],
+    ["RoomManager / MatchService", "Trọng tài trận đấu", "Tạo Room, sinh xe cộ (ObstacleGenerator), countdown, tick 50 ms, xét va chạm (CarSim), đồng bộ RACE_UPDATE, xét về đích, hòa, thoát, mất kết nối, hỏi thi đấu tiếp."],
     ["PlayerDAO / MatchDAO", "Truy cập CSDL", "Đăng nhập, lấy bảng xếp hạng, lưu trận và cập nhật điểm trong transaction."],
 ], [1.55, 1.25, 3.47], caption="Thành phần của server", first_col_bold=True)
 
@@ -484,10 +492,13 @@ table(["Lớp", "Gói", "Trách nhiệm chính"], [
     ["SessionManager", "server.core", "Đăng nhập / đăng xuất, danh sách online, trạng thái người chơi, heartbeat."],
     ["InviteManager", "server.core", "Tạo, hủy, hết hạn lời mời; kiểm tra người được mời đang Rảnh."],
     ["RoomManager", "server.core", "Tạo và hủy Room; ánh xạ người chơi → Room."],
-    ["Room", "server.core", "Trạng thái một trận: hai RaceState, danh sách chướng ngại vật, máy trạng thái, tick."],
+    ["Room", "server.core", "Trạng thái một trận: hai CarSim, danh sách xe cộ, máy trạng thái, tick."],
+    ["CarSim", "server.core", "Trọng tài từng xe: cắt tốc độ, tính quãng đường theo tick, xét va chạm với Obstacle.positionAt(tick)."],
+    ["ObstacleGenerator", "server.core", "Sinh 48 xe cộ theo seed: mỗi làn một tốc độ, hai xe cùng làn cách nhau ít nhất 40 m."],
     ["MatchService", "server.core", "Luật thắng thua, tính điểm, gọi DAO lưu kết quả."],
+    ["AccountService", "server.core", "Đăng ký tài khoản, bảng xếp hạng, lịch sử trận."],
     ["PlayerDAO, MatchDAO", "server.db", "JDBC với PreparedStatement; DbConnection quản lý kết nối."],
-    ["Message, MessageType, các DTO", "common", "Dùng chung cho client và server (PlayerInfo, RaceState, Obstacle, MatchResult…)."],
+    ["Message, MessageType, các DTO", "common", "Dùng chung cho client và server (PlayerInfo, RaceState, Obstacle, MatchResult…); do Trần Việt Anh chốt ở phần nền (D2)."],
 ], [1.7, 1.1, 3.47], caption="Các lớp phía server", first_col_bold=True, size=11)
 
 heading("4.2. Vòng lặp xử lý của ClientHandler", 2)
@@ -521,12 +532,35 @@ para("Phát hiện mất kết nối (YC11) dựa trên hai cơ chế bổ sung 
      "im lặng, SocketTimeoutException xuất hiện sau 15 giây. Cả hai trường hợp cùng đi vào nhánh xử lý "
      "onDisconnect, nên logic xử thua chỉ viết một lần.")
 para("Về đồng bộ đa luồng: mỗi Room có khóa riêng (synchronized trên đối tượng Room) để hai ClientHandler của "
-     "hai người chơi và luồng tick không đồng thời sửa RaceState; việc gửi Message qua ObjectOutputStream được "
-     "bọc trong phương thức send() có synchronized để tránh xen kẽ dữ liệu trên cùng một stream.")
+     "hai người chơi và luồng tick không đồng thời sửa trạng thái xe. Việc gửi Message được tách khỏi luồng gọi: "
+     "send() chỉ đưa thông điệp vào hàng đợi của client, một luồng ghi riêng lấy ra và ghi vào ObjectOutputStream. "
+     "Luồng tick dùng chung giữa các phòng, nên nếu ghi trực tiếp thì một client ngừng nhận (bộ đệm TCP đầy) sẽ "
+     "làm cả phòng đứng hình; với hàng đợi, chỉ client đó bị ngắt khi hàng đợi đầy.")
+heading("4.3. Gửi thông điệp không chặn", 2)
+code([
+    "private final BlockingQueue<Message> outbox = new LinkedBlockingQueue<>(256);",
+    "",
+    "public void send(Message m) {             // gọi từ luồng tick, hẹn giờ, client khác",
+    "    if (!outbox.offer(m)) closeSocket();   // không nhận kịp → ngắt, xử như mất kết nối",
+    "}",
+    "",
+    "private void writeLoop() {                // luồng ghi riêng của mỗi client",
+    "    while (!socket.isClosed()) {",
+    "        out.writeObject(outbox.take());",
+    "        out.reset();                       // không gửi lại bản cũ của DTO",
+    "        out.flush();",
+    "    }",
+    "}",
+])
+para("Khi một người đăng nhập, SessionManager phát ONLINE_LIST cho mọi người trước khi ClientHandler trả "
+     "LOGIN_RESULT; client chỉ mở sảnh sau LOGIN_RESULT nên bản danh sách đó đến quá sớm. Vì vậy ClientHandler "
+     "gửi thêm ONLINE_LIST cho chính người vừa vào ngay sau LOGIN_RESULT để sảnh có danh sách ngay.")
+para("Server nhận tham số cổng và tùy chọn --memory. Với --memory, server dùng kho dữ liệu trong bộ nhớ (6 tài "
+     "khoản mẫu, mất khi tắt server) thay cho MySQL, phục vụ chạy thử nhanh và demo; mặc định server dùng MySQL.")
 
 # ================================================================ 5. CÁ NHÂN 2
 heading("5. Phần cá nhân 2 – Client: đăng nhập, sảnh chờ và thách đấu (Vũ Văn Hiếu)")
-para("Vũ Văn Hiếu (thành viên 2) thực hiện phần client trước khi vào trận: màn hình đăng nhập, sảnh chờ hiển thị danh sách "
+para("Vũ Văn Hiếu (thành viên 2) thực hiện phần client trước khi vào trận (task C1–C7): màn hình đăng nhập, sảnh chờ hiển thị danh sách "
      "người chơi online, gửi lời mời thách đấu và hộp thoại nhận lời mời có đếm ngược 30 giây. Client được tổ "
      "chức theo MVC: View là các JFrame / JDialog, Controller là lớp NetworkClient chạy một luồng nhận riêng, "
      "Model là dữ liệu PlayerInfo nhận từ server. Mọi cập nhật giao diện đều được đẩy về luồng Swing bằng "
@@ -537,16 +571,16 @@ table(["Thành phần trên hình", "Chức năng", "Mô tả"], [
     ["Bảng danh sách online", "Hiển thị YC02", "JTable với các cột Tên, Điểm, Thắng, Trạng thái; dữ liệu là ONLINE_LIST mới nhất từ server."],
     ["Nút Thách đấu", "Gửi INVITE (YC03)", "Chỉ hiện với người Rảnh; click gửi INVITE rồi khóa nút và hiện trạng thái Đang chờ B trả lời."],
     ["Hộp thoại Lời mời thách đấu", "Nhận INVITE_RECEIVED (YC04)", "Hiện ở máy người được mời; thanh tiến trình và số giây còn lại giảm dần từ 30; nút Chấp nhận / Từ chối."],
-    ["Nút Bảng xếp hạng", "Gửi LEADERBOARD_REQ (YC12)", "Mở cửa sổ xếp hạng do phần cá nhân 4 cung cấp dữ liệu."],
-    ["Nút Làm mới / Đăng xuất", "Tiện ích", "Yêu cầu ONLINE_LIST mới; gửi LOGOUT và quay về màn hình đăng nhập."],
+    ["Nút Bảng xếp hạng", "Gửi LEADERBOARD_REQ (YC12)", "Mở cửa sổ xếp hạng (LeaderboardFrame, phần cá nhân 4)."],
+    ["Nút Lịch sử trận / Đăng xuất", "Tiện ích", "Mở lịch sử trận của mình (HistoryFrame, phần cá nhân 4); gửi LOGOUT và quay về màn hình đăng nhập."],
 ], [1.5, 1.75, 3.02], caption="Thành phần giao diện sảnh chờ", first_col_bold=True)
 
 heading("5.1. Các lớp chính phía client", 2)
 table(["Lớp", "Vai trò MVC", "Trách nhiệm chính"], [
     ["LoginFrame", "View", "Nhập username, password; gửi LOGIN; hiện lỗi nếu LOGIN_RESULT thất bại."],
-    ["LobbyFrame", "View", "JTable danh sách online; nút Thách đấu, Bảng xếp hạng, Làm mới, Đăng xuất."],
+    ["LobbyFrame", "View", "JTable danh sách online; nút Thách đấu, Bảng xếp hạng, Lịch sử trận, Đăng xuất."],
     ["InviteDialog", "View", "JDialog modal hiển thị lời mời với javax.swing.Timer đếm ngược 30 giây; tự đóng khi hết giờ hoặc nhận INVITE_RESULT."],
-    ["LeaderboardFrame", "View", "Bảng xếp hạng nhận từ LEADERBOARD."],
+    ["LeaderboardFrame, HistoryFrame, RegisterDialog", "View", "Bảng xếp hạng, lịch sử trận, đăng ký tài khoản; do Mai Anh làm (M2–M4), Hiếu nối nút mở từ sảnh và màn hình đăng nhập (C5)."],
     ["NetworkClient", "Controller", "Mở Socket, luồng nhận readObject, gửi Message; phân phối thông điệp tới màn hình đang mở; PING mỗi 5 giây."],
     ["ClientState", "Model", "Người chơi hiện tại, danh sách PlayerInfo, lời mời đang chờ, roomId hiện tại."],
 ], [1.5, 1.05, 3.72], caption="Các lớp phía client (phần sảnh)", first_col_bold=True, size=11)
@@ -569,53 +603,72 @@ para("Điểm quan trọng là thời hạn 30 giây được tính tại server
      "sau khi server đã hủy, server trả INVITE_RESULT(TIMEOUT) và client hiển thị thông báo lời mời đã hết hạn.")
 
 # ================================================================ 6. CÁ NHÂN 3
-heading("6. Phần cá nhân 3 – Giao diện màn hình đua (Trần Việt Anh)")
-para("Trần Việt Anh (thành viên 3) thực hiện giao diện đua. Màn hình chia thành hai đường đua song song: bên trái là xe của "
-     "người chơi, bên phải là xe đối thủ. Mỗi đường đua dài 1000 m (quy đổi ra pixel khi vẽ) và chia thành ba làn "
-     "để xe có thể né chướng ngại vật; hai đường đua nhận cùng danh sách chướng ngại vật từ MATCH_START nên hoàn "
-     "toàn giống nhau. Người chơi chỉ điều khiển xe của mình; dữ liệu xe đối thủ do server đồng bộ qua RACE_UPDATE.")
-figure("fig5_race.png", "Giao diện khi hai người đang đua")
+heading("6. Phần cá nhân 3 – Nền tảng và giao diện màn hình đua (Trần Việt Anh)")
+para("Trần Việt Anh (thành viên 3) làm phần nền tảng (task D1–D7: Maven nhiều module, module common với Message, "
+     "MessageType, DTO và GameConfig, lược đồ CSDL cùng DAO nền, CI, công cụ racing-tools, kiểm thử tích hợp, đóng "
+     "gói) và giao diện màn hình đua (task R1–R6). Màn hình đua theo phong cách game đua xe cổ điển nhìn từ trên "
+     "xuống: màn hình chia đôi, bên trái là đường của mình, bên phải là đường của đối thủ, mỗi bên có một camera "
+     "cuộn bám theo xe. Toàn bộ hình ảnh (đường, cảnh quan, xe, vụ nổ, chữ) được vẽ bằng Java2D dạng pixel, "
+     "không dùng file ảnh. Người chơi chỉ điều khiển xe của mình; dữ liệu xe đối thủ do server đồng bộ qua "
+     "RACE_UPDATE.")
+figure("fig5_race.png", "Màn hình đua: bên trái vừa đâm xe cộ, bên phải đối thủ sắp về đích")
 table(["Thành phần trên hình", "Chức năng", "Mô tả"], [
-    ["Đường đua bên trái", "Xe của bạn", "Vẽ bằng JPanel tùy biến; xe đổi làn theo A / D, tăng giảm tốc theo W / S; vị trí do client dự đoán rồi được server hiệu chỉnh."],
-    ["Đường đua bên phải", "Xe đối thủ", "Chỉ hiển thị theo RACE_UPDATE; không nhận phím."],
-    ["Vạch xuất phát, vạch đích", "Mốc đường đua", "Xe bắt đầu ở quãng đường 0; qua vạch đích khi quãng đường ≥ 1000 m."],
-    ["Chướng ngại vật", "Luật chơi", "Cùng làn và vị trí ở cả hai đường; va chạm làm tốc độ xe về 0 trong 1 giây. Server là nơi xác định va chạm để hai bên không lệch nhau."],
-    ["Bảng chỉ số dưới mỗi đường", "HUD", "Tốc độ (km/h), quãng đường đã đi và thanh tiến trình phần trăm của từng xe."],
-    ["Vòng tròn đếm ngược", "COUNTDOWN", "Hiện 3, 2, 1 rồi GO ở giữa màn hình; bàn phím chỉ có tác dụng sau GO."],
-    ["Nút Thoát trận", "QUIT_MATCH (YC10)", "Xác nhận rồi gửi QUIT_MATCH; người thoát bị xử thua."],
-], [1.55, 1.45, 3.27], caption="Thành phần giao diện màn hình đua", first_col_bold=True)
+    ["(1) Thanh HUD đen", "Chỉ số mỗi bên", "1P / 2P kèm tên, tốc độ KM/H, quãng đường dạng 1848/2500 M và trạng thái 1ST, 2ND, CRASH! hoặc FINISH!."],
+    ["(2) Minimap ở mép ngoài", "Tiến độ", "Dải dọc biểu diễn 2500 m, chấm đỏ là xe mình, chấm xanh là đối thủ, cho biết ai đang dẫn."],
+    ["(3) Xe của mình, vụ nổ", "Điều khiển", "Xe pixel đỏ trắng đứng cố định gần đáy khung, đường cuộn theo tốc độ. Đổi làn trượt mượt theo A / D, tăng giảm tốc theo W / S. Khi va chạm hiện vụ nổ, xe nhấp nháy, tốc độ về 0 trong 1,5 giây."],
+    ["(4) Xe cộ", "Chướng ngại vật", "48 xe, 6 kiểu (sedan nhiều màu, xe tải, xe van) theo kind; vị trí Obstacle.positionAt(tick) nội suy giữa hai RACE_UPDATE. Xe bị đâm nổ và biến mất."],
+    ["(5) Cảnh quan", "Cảm giác tốc độ", "Cỏ, cây thông, bụi, nhà mái đỏ, ao hai bên đường; sinh cố định theo hàm băm vị trí nên khi cuộn không nhấp nháy."],
+    ["(6) Vạch START / FINISH", "Mốc đường đua", "Hiện khi lọt vào khung nhìn; xe về đích khi quãng đường ≥ 2500 m."],
+    ["(7) Đường bên phải", "Xe đối thủ", "Camera riêng bám xe đối thủ, chỉ hiển thị theo RACE_UPDATE, không nhận phím."],
+    ["(8) Dòng trạng thái", "Hướng dẫn", "Phím điều khiển và trạng thái trận. Trước khi đua, hộp đếm ngược kiểu START (3, 2, 1, GO) phủ giữa màn hình; nút Thoát trận (Esc) gửi QUIT_MATCH (YC10)."],
+], [1.55, 1.3, 3.42], caption="Thành phần giao diện màn hình đua", first_col_bold=True)
 
-heading("6.1. Điều khiển và vòng lặp trò chơi", 2)
+heading("6.1. Các lớp của màn hình đua", 2)
+table(["Lớp", "Trách nhiệm chính"], [
+    ["RaceFrame", "Cửa sổ trận: nhận COUNTDOWN, RACE_UPDATE, MATCH_RESULT, REMATCH_ASK; vòng lặp 50 ms gửi CAR_STATE; xử lý phím và Thoát trận."],
+    ["RacePanel", "Chia đôi màn hình, HUD, minimap, hộp đếm ngược, dòng trạng thái; Timer 16 ms vẽ lại."],
+    ["TrackView", "Camera cuộn của một bên: nền cỏ và mặt đường, cảnh quan, vạch làn, START / FINISH, xe cộ, xe người chơi, vụ nổ."],
+    ["PixelArt", "Dựng sẵn hình pixel (xe theo kind, cây, nhà, ao, vụ nổ, chữ pixel) vào bộ đệm ảnh để mỗi khung hình chỉ việc vẽ lại."],
+    ["CarModel", "Trạng thái một xe phía client: dự đoán cục bộ, hiệu chỉnh theo server (applyServer)."],
+    ["ResultDialog, RematchDialog", "Hộp kết quả (thắng, thua, hòa, lý do, điểm mới) và hỏi thi đấu tiếp."],
+    ["RaceDemo", "Chạy màn hình đua không cần server: giả lập đếm ngược, đối thủ tự lái, xe cộ chạy, va chạm, kết quả."],
+], [1.75, 4.52], caption="Các lớp phía client (màn hình đua)", first_col_bold=True, size=11)
+
+heading("6.2. Điều khiển và vòng lặp trò chơi", 2)
 table(["Phím", "Hành động", "Mô tả"], [
-    ["W hoặc ↑", "Tăng tốc", "Tốc độ tăng 10 km/h mỗi lần nhấn, tối đa 200 km/h."],
-    ["S hoặc ↓", "Giảm tốc / phanh", "Tốc độ giảm 15 km/h mỗi lần nhấn, tối thiểu 0."],
+    ["Giữ W hoặc ↑", "Tăng tốc", "Tốc độ tăng đều 120 km/h mỗi giây khi giữ phím, tối đa 360 km/h (từ 0 lên tối đa trong 3 giây)."],
+    ["Giữ S hoặc ↓", "Phanh", "Tốc độ giảm 300 km/h mỗi giây khi giữ phím, tối thiểu 0."],
+    ["Không giữ W", "Nhả ga", "Xe tự giảm chậm 40 km/h mỗi giây."],
     ["A hoặc ←", "Sang làn trái", "Chuyển làn 1 → 0 hoặc 2 → 1; không đổi nếu đang ở làn ngoài cùng."],
     ["D hoặc →", "Sang làn phải", "Chuyển làn 0 → 1 hoặc 1 → 2."],
     ["Esc", "Thoát trận", "Tương đương nút Thoát trận."],
 ], [1.1, 1.45, 3.72], caption="Phím điều khiển", first_col_bold=True, align_center_cols=(0,))
-para("Vòng lặp trò chơi ở client chạy bằng javax.swing.Timer chu kỳ 50 ms. Mỗi chu kỳ client cập nhật quãng đường "
-     "theo tốc độ hiện tại (quãng đường tăng thêm tốc độ nhân với thời gian chu kỳ), gửi CAR_STATE lên server và "
-     "vẽ lại màn hình. Khi nhận RACE_UPDATE, client ghi đè vị trí của cả hai xe theo giá trị server để hai màn "
-     "hình luôn thống nhất; phần dự đoán cục bộ chỉ giúp xe của mình phản hồi tức thì khi bấm phím.")
+para("Phím tăng tốc và phanh là phím giữ: client ghi nhận lúc nhấn và lúc nhả (bỏ qua lặp phím của hệ điều "
+     "hành), tốc độ đổi dần theo thời gian giữ chứ không theo số lần nhấn. Vòng lặp trò chơi ở client có hai "
+     "nhịp. Timer 50 ms đổi tốc độ theo phím đang giữ, cập nhật quãng đường và gửi "
+     "CAR_STATE lên server. Timer 16 ms (khoảng 60 khung hình mỗi giây) chỉ vẽ lại để đường cuộn mượt. Khi nhận "
+     "RACE_UPDATE, client ghi đè trạng thái cả hai xe theo server và lưu lại số tick; giữa hai lần cập nhật, "
+     "TrackView nội suy thời gian để tính vị trí xe cộ bằng cùng công thức Obstacle.positionAt với server. Khi "
+     "server báo xe vừa bị choáng, client tìm xe cộ cùng làn đang chồng lên xe mình, cho nó nổ và bỏ khỏi đường.")
 code([
-    "timer = new Timer(50, e -> {",
-    "    myCar.advance(0.05);                 // quãng đường += tốc độ * 0.05 s",
-    "    net.send(new Message(MessageType.CAR_STATE,",
-    "             new CarState(myCar.distance(), myCar.lane(), myCar.speed())));",
-    "    racePanel.repaint();",
-    "});",
+    "tick = new Timer(GameConfig.TICK_MS, e -> onTick());   // 50 ms: tiến xe, gửi CAR_STATE",
     "",
-    "// Nhận RACE_UPDATE từ server (đã ở luồng Swing)",
-    "void onRaceUpdate(RaceState state) {",
-    "    myCar.applyServer(state.me());        // hiệu chỉnh theo server",
-    "    opponentCar.applyServer(state.opponent());",
-    "    if (state.finished()) timer.stop();",
+    "private void onRaceUpdate(RaceState s) {",
+    "    panel.setRaceTick(s.tick());                  // mốc để vẽ xe cộ",
+    "    if (myCar.applyServer(s.me())) {              // server báo va chạm",
+    "        panel.flashMine();                        // nổ + nhấp nháy",
+    "    }",
+    "    if (opponentCar.applyServer(s.opponent())) {",
+    "        panel.flashOpponent();",
+    "    }",
     "}",
 ])
 
 # ================================================================ 7. CÁ NHÂN 4
-heading("7. Phần cá nhân 4 – Cơ sở dữ liệu và bảng xếp hạng (Nguyễn Trần Mai Anh)")
-para("Nguyễn Trần Mai Anh (thành viên 4) thực hiện thiết kế dữ liệu và bảng xếp hạng. Khi trận kết thúc, server lưu kết quả vào bảng "
+heading("7. Phần cá nhân 4 – Dữ liệu: bảng xếp hạng, đăng ký, lịch sử trận (Nguyễn Trần Mai Anh)")
+para("Nguyễn Trần Mai Anh (thành viên 4) phụ trách phần dữ liệu (task M1–M6): mô tả CSDL trong docs/DB.md, bảng "
+     "xếp hạng đầu cuối, đăng ký tài khoản, lịch sử trận, ghi diễn biến vào match_events và kiểm tra dữ liệu bằng SQL "
+     "khi kiểm thử tích hợp. Lược đồ và DAO nền do Trần Việt Anh dựng ở phần nền tảng (D3, D4). Khi trận kết thúc, server lưu kết quả vào bảng "
      "matches, ghi các sự kiện quan trọng vào match_events và cập nhật điểm, số trận thắng, thua, hòa trong bảng "
      "players. Bảng xếp hạng được lấy trực tiếp từ players, sắp xếp theo tổng điểm giảm dần rồi tổng số trận thắng "
      "giảm dần (YC12).")
@@ -624,7 +677,7 @@ table(["Thành phần trên hình", "Chức năng", "Mô tả"], [
     ["players", "Lưu người chơi", "Tài khoản (username duy nhất, mật khẩu băm), tổng điểm, số trận thắng, thua, hòa. Điểm và số thắng là cột lưu sẵn để truy vấn xếp hạng nhanh."],
     ["matches", "Lưu kết quả trận", "Mã phòng, hai người chơi, người thắng, trạng thái, lý do kết thúc, thời gian bắt đầu và kết thúc."],
     ["Ba quan hệ players → matches", "Hai người chơi và người thắng", "player1_id, player2_id, winner_id cùng là khóa ngoại tới players; winner_id NULL khi hòa hoặc hủy trận."],
-    ["match_events", "Lưu diễn biến", "Sự kiện theo thời gian: START, LANE_CHANGE, COLLISION, FINISH, QUIT, DISCONNECT với payload JSON."],
+    ["match_events", "Lưu diễn biến", "Sự kiện theo thời gian: START, COLLISION, FINISH, QUIT, DISCONNECT, REMATCH với payload JSON; COLLISION ghi làn, quãng đường của xe và vị trí xe cộ lúc va chạm."],
     ["Truy vấn xếp hạng", "YC12", "ORDER BY points DESC, wins DESC; có chỉ mục (points, wins) để sắp xếp nhanh."],
 ], [1.6, 1.3, 3.37], caption="Thành phần của mô hình dữ liệu", first_col_bold=True)
 
@@ -715,11 +768,11 @@ para("Client nhận danh sách RankRow qua thông điệp LEADERBOARD và hiển
 # ================================================================ 8. PHÂN CÔNG
 heading("8. Phân công công việc")
 table(["Thành viên", "Phần phụ trách", "Sản phẩm bàn giao"], [
-    ["Phạm Thị Thu Phương", "Server và kiến trúc (mục 4)", "GameServer, ClientHandler, SessionManager, InviteManager, RoomManager, MatchService; module common (Message, DTO)."],
-    ["Vũ Văn Hiếu", "Client: đăng nhập, sảnh, thách đấu (mục 5)", "LoginFrame, LobbyFrame, InviteDialog, LeaderboardFrame, NetworkClient, ClientState."],
-    ["Trần Việt Anh", "Giao diện màn hình đua (mục 6)", "RaceFrame, RacePanel, CarModel, xử lý phím, vòng lặp 50 ms, hiệu chỉnh theo RACE_UPDATE."],
-    ["Nguyễn Trần Mai Anh", "CSDL và bảng xếp hạng (mục 7)", "Script schema.sql, DbConnection, PlayerDAO, MatchDAO, dữ liệu mẫu, truy vấn xếp hạng."],
-    ["Cả nhóm", "Tích hợp và kiểm thử", "Chạy 3 client cùng lúc trên 2 máy, kiểm thử các tình huống ở Bảng 7, viết báo cáo."],
+    ["Phạm Thị Thu Phương", "Server, S1–S7 (mục 4)", "GameServer, ClientHandler (hàng đợi gửi, luồng ghi), SessionManager, InviteManager, Room, RoomManager, CarSim, ObstacleGenerator, MatchService, AccountService; chịu tải 2 phòng song song."],
+    ["Vũ Văn Hiếu", "Client sảnh, C1–C7 (mục 5)", "NetworkClient, ClientState, LoginFrame, LobbyFrame, InviteDialog; điều hướng sảnh ↔ trận, xử lý mất kết nối phía client."],
+    ["Trần Việt Anh", "Nền tảng D1–D7, màn hình đua R1–R6 (mục 6)", "Maven, module common, schema.sql, seed.sql, DbConnection, PlayerDAO, MatchDAO nền, CI, racing-tools; RaceFrame, RacePanel, TrackView, PixelArt, CarModel, ResultDialog, RematchDialog, RaceDemo; dẫn kiểm thử tích hợp, đóng gói bản chạy."],
+    ["Nguyễn Trần Mai Anh", "Dữ liệu SQL, M1–M6 (mục 7)", "docs/DB.md, LeaderboardFrame, RegisterDialog, HistoryFrame, MatchDAO.findRecentByPlayer, ghi match_events, kiểm tra SQL trong docs/TEST-PLAN.md."],
+    ["Cả nhóm", "Tích hợp và kiểm thử", "Chạy kịch bản T1–T19 trong docs/TEST-PLAN.md trên 2 máy cùng mạng LAN (các tình huống ở mục 3.5), viết báo cáo."],
 ], [1.6, 1.9, 2.77], caption="Phân công công việc trong nhóm", first_col_bold=True)
 
 # ================================================================ 9. KẾT LUẬN

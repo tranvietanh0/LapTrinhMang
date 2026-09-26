@@ -170,7 +170,7 @@ def fig_server():
     hy = [6.9, 5.4, 3.9]
     for i, y in enumerate(hy):
         box(ax, 4.0, y, 2.6, 1.2, f"ClientHandler #{i + 1}",
-            ["Thread riêng · ObjectStream"], fc=C_CLIENT, ec=C_CLIENT_E, title_size=10.5, body_size=9)
+            ["Luồng đọc + luồng ghi · hàng đợi gửi"], fc=C_CLIENT, ec=C_CLIENT_E, title_size=10.5, body_size=9)
         arrow(ax, (3.4, 7.15), (4.0, y + 0.6), color=C_ARROW, lw=1.3)
     ax.text(6.1, 3.6, "… một thread cho mỗi client", ha="center", fontsize=9, style="italic", color="#555")
     # core services (right column)
@@ -182,7 +182,7 @@ def fig_server():
         fc=C_SERVER, ec=C_SERVER_E, title_size=11, body_size=9)
     # bottom row
     box(ax, 0.7, 0.8, 5.9, 2.5, "RoomManager / MatchService",
-        ["Tạo Room cho 2 người chơi · Countdown 3-2-1", "Nhận CAR_STATE, đồng bộ RACE_UPDATE cho cả hai",
+        ["Tạo Room, sinh 18 xe cộ theo seed · Countdown 3-2-1", "Nhận CAR_STATE, đồng bộ RACE_UPDATE cho cả hai",
          "Xét về đích, hòa, thoát, mất kết nối", "Cập nhật điểm, hỏi thi đấu tiếp"],
         fc=C_SERVER, ec=C_SERVER_E, title_size=11, body_size=9)
     box(ax, 7.2, 0.8, 2.6, 2.5, "PlayerDAO · MatchDAO",
@@ -234,7 +234,7 @@ def fig_lobby():
             ax.text(8.2, y, "Thách đấu", color="white", fontsize=9, ha="center", va="center", fontweight="bold")
         y -= 0.62
     # bottom buttons
-    for x, t, fc in [(0.7, "Bảng xếp hạng", "#6C757D"), (2.6, "Làm mới", "#6C757D"), (7.4, "Đăng xuất", "#C0392B")]:
+    for x, t, fc in [(0.7, "Bảng xếp hạng", "#6C757D"), (2.6, "Lịch sử trận", "#6C757D"), (7.4, "Đăng xuất", "#C0392B")]:
         ax.add_patch(FancyBboxPatch((x, 0.75), 1.7, 0.5, boxstyle="round,pad=0,rounding_size=0.08", fc=fc, ec="none"))
         ax.text(x + 0.85, 1.0, t, color="white", fontsize=9.5, ha="center", va="center", fontweight="bold")
     # Invite dialog on the right
@@ -257,63 +257,32 @@ def fig_lobby():
     save(fig, "fig4_lobby.png")
 
 
-# ---------------------------------------------------------------- 5. Race UI mockup
+# ---------------------------------------------------------------- 5. Race UI (ảnh chụp thật + chú thích)
 def fig_race():
-    fig, ax = new_fig(1500, 900)
-
-    def car(ax, x, y, w, h, color):
-        ax.add_patch(FancyBboxPatch((x, y), w, h, boxstyle="round,pad=0,rounding_size=0.08", fc=color, ec="#222", lw=1))
-        ax.add_patch(Rectangle((x + w * 0.2, y + h * 0.55), w * 0.6, h * 0.25, fc="#BFE3FF", ec="none"))
-
-    def track(ax, x0, title, subtitle, car_lane, car_y, car_col, prog):
-        w, h = 5.4, 6.2
-        y0 = 1.5
-        # header
-        ax.add_patch(Rectangle((x0, y0 + h), w, 0.75, fc="#E9EEF5", ec="#555", lw=1.2))
-        ax.text(x0 + w / 2, y0 + h + 0.5, title, ha="center", va="center", fontsize=11.5, fontweight="bold")
-        ax.text(x0 + w / 2, y0 + h + 0.2, subtitle, ha="center", va="center", fontsize=9, color="#444")
-        # road
-        ax.add_patch(Rectangle((x0, y0), w, h, fc=C_ROAD, ec="#222", lw=1.2))
-        lane_w = w / 3
-        for i in (1, 2):
-            lx = x0 + lane_w * i
-            for k in range(14):
-                yy = y0 + 0.15 + k * 0.45
-                ax.plot([lx, lx], [yy, yy + 0.25], color="white", lw=1.3)
-        # start / finish
-        for yy, lbl in [(y0 + 0.35, "XUẤT PHÁT"), (y0 + h - 0.35, "ĐÍCH")]:
-            for i in range(12):
-                ax.add_patch(Rectangle((x0 + i * (w / 12), yy - 0.08), w / 12, 0.16,
-                                       fc="white" if i % 2 == 0 else "#222", ec="none"))
-            ax.text(x0 + w + 0.12, yy, lbl, fontsize=9, va="center", ha="left", fontweight="bold", color="#333")
-        # obstacles (same for both tracks)
-        obstacles = [(0, 2.9), (2, 3.9), (1, 4.7), (0, 5.5), (2, 1.8)]
-        for lane, oy in obstacles:
-            ox = x0 + lane_w * lane + lane_w / 2 - 0.3
-            ax.add_patch(Rectangle((ox, y0 + oy), 0.6, 0.35, fc="#E67E22", ec="#7A3E00", lw=1))
-            ax.plot([ox, ox + 0.6], [y0 + oy, y0 + oy + 0.35], color="#7A3E00", lw=0.8)
-            ax.plot([ox, ox + 0.6], [y0 + oy + 0.35, y0 + oy], color="#7A3E00", lw=0.8)
-        # car
-        cx = x0 + lane_w * car_lane + lane_w / 2 - 0.3
-        car(ax, cx, y0 + car_y, 0.6, 0.85, car_col)
-        # HUD under track
-        ax.add_patch(Rectangle((x0, 0.45), w, 0.85, fc="#F7F7F7", ec="#555", lw=1))
-        ax.text(x0 + 0.15, 1.05, f"Tốc độ: {prog[0]} km/h", fontsize=9.5, va="center")
-        ax.text(x0 + 0.15, 0.7, f"Quãng đường: {prog[1]} / 1000 m", fontsize=9.5, va="center")
-        # progress bar
-        ax.add_patch(Rectangle((x0 + 3.0, 0.75), 2.2, 0.28, fc="#DDD", ec="#999", lw=0.6))
-        ax.add_patch(Rectangle((x0 + 3.0, 0.75), 2.2 * prog[1] / 1000, 0.28, fc=car_col, ec="none"))
-        ax.text(x0 + 4.1, 0.89, f"{prog[1] // 10}%", fontsize=8.5, ha="center", va="center", color="white", fontweight="bold")
-
-    track(ax, 0.6, "XE CỦA BẠN (alice)", "W / ↑: tăng tốc   S / ↓: phanh   A / D: đổi làn", 1, 2.0, "#2F6DB5", (120, 380))
-    track(ax, 8.0, "XE ĐỐI THỦ (bob)", "Vị trí, tốc độ, quãng đường do server đồng bộ", 2, 1.4, "#C0392B", (105, 310))
-    # centre countdown badge
-    ax.add_patch(Circle((7.0, 8.55), 0.38, fc="#FFF1D6", ec=C_SERVER_E, lw=1.5))
-    ax.text(7.0, 8.55, "3", fontsize=16, fontweight="bold", ha="center", va="center", color=C_SERVER_E)
-    ax.text(7.0, 8.0, "Đếm ngược 3-2-1", fontsize=8.5, ha="center", va="center", color="#555")
-    # footer buttons
-    ax.add_patch(FancyBboxPatch((6.2, 0.45), 1.6, 0.5, boxstyle="round,pad=0,rounding_size=0.08", fc="#C0392B", ec="none"))
-    ax.text(7.0, 0.7, "Thoát trận", color="white", fontsize=9.5, ha="center", va="center", fontweight="bold")
+    """Ảnh màn hình đua thật (RacePanel vẽ ra ảnh, không chụp desktop) kèm số chú thích khớp bảng."""
+    img = plt.imread(os.path.join(OUT, "race_screen_src.png"))
+    h, w = img.shape[0], img.shape[1]
+    fig = plt.figure(figsize=(w / 100, h / 100), dpi=100)
+    ax = fig.add_axes([0, 0, 1, 1])
+    ax.imshow(img)
+    ax.set_xlim(0, w)
+    ax.set_ylim(h, 0)
+    ax.axis("off")
+    # (số, x, y) theo toạ độ pixel của ảnh 1200x800; khớp thứ tự dòng trong bảng thành phần
+    callouts = [
+        (1, 250, 38),    # HUD
+        (2, 40, 420),    # minimap
+        (3, 262, 655),   # xe mình + vụ nổ
+        (4, 345, 495),   # xe cộ
+        (5, 520, 470),   # cảnh quan
+        (6, 1070, 527),  # vạch FINISH
+        (7, 945, 705),   # xe đối thủ (đường bên phải)
+        (8, 600, 787),   # dòng trạng thái
+    ]
+    for n, x, y in callouts:
+        ax.add_patch(Circle((x, y), 17, fc=C_SERVER, ec=C_SERVER_E, lw=2.2, zorder=5))
+        ax.text(x, y, str(n), ha="center", va="center", fontsize=13, fontweight="bold",
+                color=C_SERVER_E, zorder=6)
     save(fig, "fig5_race.png")
 
 
