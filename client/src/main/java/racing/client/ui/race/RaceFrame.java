@@ -100,8 +100,7 @@ public final class RaceFrame extends JFrame {
         rematchPending = false;
         phase = Phase.WAITING;
         panel.setObstacles(start.obstacles());
-        panel.setTitles("XE CỦA BẠN (" + start.me().username() + ")",
-                "XE ĐỐI THỦ (" + start.opponent().username() + ")");
+        panel.setTitles(start.me().username(), start.opponent().username());
         panel.setStatusText("Đang chờ server đếm ngược…");
         panel.setCountdownText(null);
         panel.repaint();
@@ -159,6 +158,7 @@ public final class RaceFrame extends JFrame {
         if (s == null || match == null || s.roomId() != match.roomId()) {
             return;
         }
+        panel.setRaceTick(s.tick());
         if (myCar.applyServer(s.me())) {
             panel.flashMine();
         }
