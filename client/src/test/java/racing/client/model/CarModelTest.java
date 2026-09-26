@@ -10,16 +10,32 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class CarModelTest {
 
+    private static void run(CarModel car, double seconds) {
+        for (int i = 0; i < Math.round(seconds * 1000 / GameConfig.TICK_MS); i++) {
+            car.advance(GameConfig.TICK_MS / 1000.0);
+        }
+    }
+
     @Test
-    void speedIsClampedBetweenZeroAndMax() {
+    void holdingThrottleReachesMaxInAboutThreeSecondsAndIsClamped() {
         CarModel car = new CarModel("alice", 1);
-        for (int i = 0; i < 100; i++) {
-            car.accelerate();
-        }
+        car.setThrottle(true);
+        run(car, 1);
+        assertEquals(GameConfig.ACCEL_KMH_PER_S, car.speed(), 1e-6);
+        run(car, 10);
         assertEquals(GameConfig.MAX_SPEED, car.speed());
-        for (int i = 0; i < 100; i++) {
-            car.brake();
-        }
+    }
+
+    @Test
+    void releasingThrottleCoastsAndBrakeStopsAtZero() {
+        CarModel car = new CarModel("alice", 1);
+        car.setThrottle(true);
+        run(car, 10);
+        car.setThrottle(false);
+        run(car, 1);
+        assertEquals(GameConfig.MAX_SPEED - GameConfig.COAST_KMH_PER_S, car.speed(), 1e-6);
+        car.setBrake(true);
+        run(car, 10);
         assertEquals(0, car.speed());
     }
 
@@ -39,12 +55,12 @@ class CarModelTest {
     @Test
     void advanceUsesSpeedAndTickAndStopsAtFinish() {
         CarModel car = new CarModel("alice", 1);
-        for (int i = 0; i < 20; i++) {
-            car.accelerate();          // 200 km/h
-        }
+        car.setThrottle(true);
+        run(car, 10);                  // đạt MAX_SPEED
+        double before = car.distance();
         car.advance(GameConfig.TICK_MS / 1000.0);
         double expected = GameConfig.MAX_SPEED * GameConfig.KMH_TO_MS * GameConfig.TICK_MS / 1000.0;
-        assertEquals(expected, car.distance(), 1e-9);
+        assertEquals(expected, car.distance() - before, 1e-9);
         assertFalse(car.finished());
 
         for (int i = 0; i < 100_000 && !car.finished(); i++) {
@@ -52,7 +68,6 @@ class CarModelTest {
         }
         assertTrue(car.finished());
         assertEquals(GameConfig.TRACK_LENGTH, car.distance());
-        car.accelerate();
         car.advance(1);
         assertEquals(GameConfig.TRACK_LENGTH, car.distance(), "không đi tiếp sau khi về đích");
     }
@@ -68,14 +83,14 @@ class CarModelTest {
         assertFalse(car.applyServer(new CarSnapshot("alice", 130, 2, 90, false, false)));
         car.advance(0.05);
         assertTrue(car.distance() > 130);
-        assertEquals(13, car.progressPercent());
+        assertEquals(5, car.progressPercent());   // ~130 m / 2500 m
     }
 
     @Test
     void stunnedCarDoesNotMoveOrAccelerate() {
         CarModel car = new CarModel("alice", 1);
         car.applyServer(new CarSnapshot("alice", 50, 1, 0, true, false));
-        car.accelerate();
+        car.setThrottle(true);
         car.advance(1);
         assertEquals(0, car.speed());
         assertEquals(50, car.distance());

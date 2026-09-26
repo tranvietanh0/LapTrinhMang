@@ -34,8 +34,6 @@ public final class RaceDemo {
 
     private static final Random RNG = new Random();
     /** Số xe cộ và tốc độ mỗi làn (km/h) chỉ cho bản demo; luật thật do server sinh. */
-    private static final int TRAFFIC_COUNT = 18;
-    private static final double[] LANE_SPEEDS = {70, 100, 130};
 
     private RaceFrame frame;
     private int roomId = 1;
@@ -80,16 +78,16 @@ public final class RaceDemo {
 
     /** Xe cộ chạy cùng chiều; mỗi làn một tốc độ nên xe cùng làn không đè nhau. */
     static List<Obstacle> randomObstacles() {
-        double[] speeds = LANE_SPEEDS.clone();
+        double[] speeds = GameConfig.TRAFFIC_SPEEDS.stream().mapToDouble(Double::doubleValue).toArray();
         for (int i = speeds.length - 1; i > 0; i--) {
             int j = RNG.nextInt(i + 1);
             double t = speeds[i]; speeds[i] = speeds[j]; speeds[j] = t;
         }
         List<Obstacle> list = new ArrayList<>();
-        double step = (GameConfig.TRACK_LENGTH - 150) / TRAFFIC_COUNT;
-        for (int i = 0; i < TRAFFIC_COUNT; i++) {
+        double step = (GameConfig.TRACK_LENGTH - 150) / GameConfig.OBSTACLE_COUNT;
+        for (int i = 0; i < GameConfig.OBSTACLE_COUNT; i++) {
             int lane = RNG.nextInt(GameConfig.LANES);
-            list.add(new Obstacle(lane, 60 + i * step + RNG.nextInt(15), speeds[lane], RNG.nextInt(6)));
+            list.add(new Obstacle(lane, 60 + i * step + RNG.nextInt(15), speeds[lane], RNG.nextInt(GameConfig.TRAFFIC_KINDS)));
         }
         return list;
     }
@@ -175,7 +173,7 @@ public final class RaceDemo {
         tickNo++;
         double oppSpeed = 0;
         if (!oppFinished && now >= oppStunUntil) {
-            oppSpeed = 140 + 30 * Math.sin(tickNo / 40.0);
+            oppSpeed = GameConfig.MAX_SPEED * 0.85 + 40 * Math.sin(tickNo / 40.0);
             // né xe cộ phía trước trong cùng làn (thỉnh thoảng né hụt cho có va chạm)
             for (int i = 0; i < obstacles.size(); i++) {
                 Obstacle o = obstacles.get(i);

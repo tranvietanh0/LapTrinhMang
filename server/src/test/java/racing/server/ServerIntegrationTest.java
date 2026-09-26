@@ -36,7 +36,7 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 /**
  * Test đầu cuối qua socket với MySQL thật (chỉ chạy khi có RACING_TEST_DB_URL, như trên CI):
- * alice mời bob, bob nhận, alice chạy 200 km/h về đích, bob đứng yên; kiểm tra kết quả và
+ * alice mời bob, bob nhận, alice chạy MAX_SPEED về đích, bob đứng yên; kiểm tra kết quả và
  * điểm trong DB; bob từ chối thi đấu tiếp; cả hai nhận ROOM_CLOSED.
  */
 class ServerIntegrationTest {
@@ -93,9 +93,9 @@ class ServerIntegrationTest {
 
         Message await(MessageType type) throws InterruptedException {
             while (true) {
-                Message m = inbox.poll(60, TimeUnit.SECONDS);
+                Message m = inbox.poll(120, TimeUnit.SECONDS);
                 if (m == null) {
-                    throw new AssertionError("không nhận được " + type + " trong 60 s");
+                    throw new AssertionError("không nhận được " + type + " trong 120 s");
                 }
                 if (m.getType() == type) {
                     return m;
@@ -161,11 +161,11 @@ class ServerIntegrationTest {
                     break;
                 }
             }
-            // alice chạy 200 km/h, gửi CAR_STATE mỗi tick; bob chỉ đọc
+            // alice chạy MAX_SPEED, gửi CAR_STATE mỗi tick; bob chỉ đọc
             Thread driver = new Thread(() -> {
                 try {
                     for (int i = 0; i < 2000; i++) {
-                        a.send(new Message(MessageType.CAR_STATE, new CarState(0, 1, 200)));
+                        a.send(new Message(MessageType.CAR_STATE, new CarState(0, 1, GameConfig.MAX_SPEED)));
                         Thread.sleep(GameConfig.TICK_MS);
                     }
                 } catch (Exception ignored) {

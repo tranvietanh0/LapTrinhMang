@@ -15,7 +15,7 @@ public final class GameConfig {
     public static final int PORT = 5000;
 
     /** Chiều dài đường đua (mét). Xe về đích khi distance >= TRACK_LENGTH. */
-    public static final double TRACK_LENGTH = 1000.0;
+    public static final double TRACK_LENGTH = 2500.0;
 
     /** Số làn trên mỗi đường đua (0, 1, 2). */
     public static final int LANES = 3;
@@ -36,28 +36,31 @@ public final class GameConfig {
     public static final int COUNTDOWN_S = 3;
 
     /** Tốc độ tối đa (km/h). Server cắt mọi giá trị lớn hơn về ngưỡng này. */
-    public static final double MAX_SPEED = 200.0;
+    public static final double MAX_SPEED = 360.0;
 
-    /** Tốc độ tăng mỗi lần nhấn W (km/h). */
-    public static final double ACCEL_STEP = 10.0;
+    /** Giữ W: tốc độ tăng đều (km/h mỗi giây), từ 0 lên MAX_SPEED trong 3 giây. */
+    public static final double ACCEL_KMH_PER_S = 120.0;
 
-    /** Tốc độ giảm mỗi lần nhấn S (km/h). */
-    public static final double BRAKE_STEP = 15.0;
+    /** Giữ S: tốc độ giảm (km/h mỗi giây). */
+    public static final double BRAKE_KMH_PER_S = 300.0;
+
+    /** Không giữ W: xe tự giảm tốc chậm (km/h mỗi giây). */
+    public static final double COAST_KMH_PER_S = 40.0;
 
     /** Sau va chạm tốc độ về 0 trong khoảng này (mili giây). */
-    public static final int COLLISION_STUN_MS = 1000;
+    public static final int COLLISION_STUN_MS = 1500;
 
     /**
      * Số xe cộ (chướng ngại vật) trên mỗi đường đua, chia đều cho các làn. Xe cộ chạy cùng chiều
      * nên cần nhiều hơn vật đứng yên để người chơi luôn phải né.
      */
-    public static final int OBSTACLE_COUNT = 18;
+    public static final int OBSTACLE_COUNT = 48;
 
     /**
      * Tốc độ (km/h) của xe cộ, mỗi làn nhận một giá trị (xáo theo seed). Cùng làn cùng tốc độ nên
      * xe cộ trong một làn không bao giờ chồng lên nhau. Số phần tử phải bằng LANES, nhỏ hơn MAX_SPEED.
      */
-    public static final List<Double> TRAFFIC_SPEEDS = List.of(70.0, 100.0, 130.0);
+    public static final List<Double> TRAFFIC_SPEEDS = List.of(110.0, 160.0, 210.0);
 
     /** Số kiểu xe cộ để client chọn hình vẽ (kind 0..TRAFFIC_KINDS-1). */
     public static final int TRAFFIC_KINDS = 6;

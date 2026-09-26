@@ -47,7 +47,7 @@ class CarSimTest {
     @Test
     void reachesFinishAfterExpectedTicks() {
         CarSim car = new CarSim("alice", 1);
-        car.applyClient(new CarState(0, 1, 200), 0);
+        car.applyClient(new CarState(0, 1, GameConfig.MAX_SPEED), 0);
         long now = 0;
         long tick = 0;
         while (!car.finished()) {

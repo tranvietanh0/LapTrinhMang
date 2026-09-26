@@ -236,10 +236,10 @@ public final class RaceFrame extends JFrame {
 
     private void bindKeys() {
         JComponent root = getRootPane();
-        bind(root, "W", myCar::accelerate);
-        bind(root, "UP", myCar::accelerate);
-        bind(root, "S", myCar::brake);
-        bind(root, "DOWN", myCar::brake);
+        bindHold(root, "W", myCar::setThrottle);
+        bindHold(root, "UP", myCar::setThrottle);
+        bindHold(root, "S", myCar::setBrake);
+        bindHold(root, "DOWN", myCar::setBrake);
         bind(root, "A", myCar::laneLeft);
         bind(root, "LEFT", myCar::laneLeft);
         bind(root, "D", myCar::laneRight);
@@ -265,6 +265,24 @@ public final class RaceFrame extends JFrame {
                 }
             }
         });
+    }
+
+    /** Phím giữ: gửi true khi nhấn, false khi nhả (bỏ qua lặp phím của hệ điều hành). */
+    private void bindHold(JComponent c, String key, java.util.function.Consumer<Boolean> action) {
+        for (boolean released : new boolean[] {false, true}) {
+            String name = key + (released ? "-up" : "-down");
+            c.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW)
+                    .put(KeyStroke.getKeyStroke((released ? "released " : "pressed ") + key), name);
+            c.getActionMap().put(name, new AbstractAction() {
+                @Override
+                public void actionPerformed(ActionEvent e) {
+                    // nhả phím luôn được nhận, kể cả trước GO, để không kẹt ga
+                    if (released || phase == Phase.RACING) {
+                        action.accept(!released);
+                    }
+                }
+            });
+        }
     }
 
     public long elapsedMillis() {
