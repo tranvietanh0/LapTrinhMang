@@ -78,7 +78,7 @@ Lớp `RaceFrame` chỉ cần một hàm gửi `Message` và phương thức `ha
 1. `docker compose up -d` (hoặc server `--memory`), chạy server, mở 2 client.
 2. Đăng nhập `alice` và `bob`: sảnh hai bên thấy nhau, trạng thái Rảnh.
 3. `alice` thách đấu `bob`: hộp thoại đếm ngược 30 s, bấm Chấp nhận.
-4. Đếm ngược 3-2-1-GO, đua 1000 m, 3 làn, 8 chướng ngại vật giống nhau hai bên; va chạm làm xe khựng 1 s.
+4. Đếm ngược 3-2-1-GO, đua 2500 m, 3 làn, 48 xe cộ chạy cùng chiều giống nhau hai bên (mỗi làn một tốc độ); giữ W để tăng tốc tới 360 km/h, giữ S để phanh; đâm vào xe cộ thì nổ, xe khựng 1,5 s. Màn hình kiểu game đua xe cổ điển: camera cuộn, cảnh quan, HUD, minimap.
 5. Về đích: hộp kết quả, điểm mới; hỏi thi đấu tiếp, một bên từ chối thì về sảnh.
 6. Mở Bảng xếp hạng và Lịch sử trận để thấy điểm và trận vừa đấu (với MySQL thì dữ liệu còn sau khi tắt server).
 7. Thoát trận giữa chừng (Esc) để thấy xử thua; đăng ký tài khoản mới ở màn hình đăng nhập.
