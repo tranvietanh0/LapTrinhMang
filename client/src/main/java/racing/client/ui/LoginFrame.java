@@ -7,6 +7,7 @@ import racing.common.dto.LoginRequest;
 import racing.common.dto.LoginResult;
 import racing.common.net.Message;
 import racing.common.net.MessageType;
+import racing.client.ui.theme.*;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.WindowAdapter;
@@ -31,29 +32,31 @@ public final class LoginFrame extends JFrame {
         this.app=app;
         serverField=new JTextField(defaultHost+":"+defaultPort,18);
         setDefaultCloseOperation(EXIT_ON_CLOSE);
-        JPanel root=new JPanel(new BorderLayout()); root.setBackground(GameTheme.BG);
-        root.add(new GaragePanel(),BorderLayout.CENTER);
         JPanel form=GameTheme.column();
-        form.setBorder(BorderFactory.createEmptyBorder(48,40,32,40));
-        form.setPreferredSize(new Dimension(440,680));
-        form.add(GameTheme.eyebrow("PIT ENTRY / ĐĂNG NHẬP")); GameTheme.gap(form,16);
-        form.add(GameTheme.heading("Sẵn sàng xuất phát?")); GameTheme.gap(form,8);
+        form.add(GameTheme.eyebrow("PIT ENTRY / ĐĂNG NHẬP")); GameTheme.gap(form,6);
+        form.add(GameTheme.heading("SẴN SÀNG XUẤT PHÁT?")); GameTheme.gap(form,4);
         form.add(GameTheme.label("Vào sảnh và tìm đối thủ của bạn.",GameTheme.BODY,GameTheme.MUTED));
-        GameTheme.gap(form,32);
+        GameTheme.gap(form,22);
         GameTheme.formField(form,"SERVER / HOST:PORT",serverField);
         GameTheme.formField(form,"TÀI KHOẢN",userField);
         GameTheme.formField(form,"MẬT KHẨU",passField);
-        GameTheme.fullWidth(errorLabel,48);
+        GameTheme.fullWidth(errorLabel,40);
         GameTheme.status(errorLabel,"Nhập địa chỉ server để chơi cùng bạn bè.",GameTheme.MUTED);
-        form.add(errorLabel); GameTheme.gap(form,8);
-        GameTheme.fullWidth(loginButton,GameTheme.CONTROL_H); form.add(loginButton); GameTheme.gap(form,16);
-        GameTheme.fullWidth(registerButton,GameTheme.CONTROL_H); form.add(registerButton); GameTheme.gap(form,24);
-        form.add(GameTheme.label("W / ↑  Tăng tốc     A / D  Đổi làn",GameTheme.SMALL,GameTheme.MUTED));
-        root.add(form,BorderLayout.EAST); setContentPane(root); GameTheme.decorate(this);
+        form.add(errorLabel); GameTheme.gap(form,4);
+        GameTheme.fullWidth(loginButton,GameTheme.CONTROL_H); form.add(loginButton); GameTheme.gap(form,8);
+        GameTheme.fullWidth(registerButton,GameTheme.CONTROL_H); form.add(registerButton); GameTheme.gap(form,14);
+        form.add(GameTheme.label("W  Tăng tốc     A / D  Đổi làn     F11  Toàn màn hình",GameTheme.SMALL,GameTheme.MUTED));
+        JPanel card=GameTheme.card(new BorderLayout(),26); card.add(form,BorderLayout.CENTER);
+        HeroPanel hero=new HeroPanel("STREET RACING NETWORK","ĐƯỜNG ĐUA","CỦA BẠN.","Chọn đối thủ. Giữ tay lái. Vượt lên phía trước.",
+                new String[][]{{"1 VS 1","ĐẤU TRỰC TIẾP"},{"2.500 M","ĐƯỜNG ĐUA"},{"3 LÀN","NÉ XE CỘ"}});
+        NfsBackdrop root=new NfsBackdrop();
+        root.add(hero); root.add(card);
+        root.setLayout(new HeroCardLayout(hero,card,440,1000,28));
+        GameTheme.decorate(this);
+        ScreenFrame.fit(this,1280,800); ScreenFrame.install(this,root,new Dimension(900,600)); setLocationRelativeTo(null);
         getRootPane().setDefaultButton(loginButton);
         loginButton.addActionListener(e->login()); registerButton.addActionListener(e->register());
         addWindowListener(new WindowAdapter() { public void windowClosed(WindowEvent e) { unregister(); } });
-        pack(); setMinimumSize(new Dimension(980,720)); setLocationRelativeTo(null);
     }
     public void setUsername(String username) { userField.setText(username); passField.requestFocusInWindow(); }
     private void login() {

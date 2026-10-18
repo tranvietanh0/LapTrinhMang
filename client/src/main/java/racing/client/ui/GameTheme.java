@@ -1,54 +1,81 @@
 package racing.client.ui;
 
+import com.formdev.flatlaf.FlatDarkLaf;
+import com.formdev.flatlaf.FlatLaf;
+import racing.client.ui.theme.ChamferButton;
+import racing.client.ui.theme.ChamferPanel;
+import racing.client.ui.theme.NfsFieldUI;
+import racing.client.ui.theme.NfsFonts;
+import racing.client.ui.theme.NfsPalette;
+import racing.client.ui.theme.Responsive;
+
 import javax.swing.*;
-import javax.swing.border.Border;
-import javax.swing.plaf.basic.BasicTextFieldUI;
-import javax.swing.plaf.basic.BasicPasswordFieldUI;
 import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.text.JTextComponent;
 import java.awt.*;
-import java.awt.event.FocusAdapter;
-import java.awt.event.FocusEvent;
 import java.awt.image.BufferedImage;
+import java.util.Map;
 
-/** Shared visual language for the game menus. All painting stays static and lightweight. */
+/**
+ * Entry point of the Need-for-Speed street design system. The visual pieces live in
+ * {@code racing.client.ui.theme}; this facade keeps the original menu API stable.
+ */
 public final class GameTheme {
-    private static final Color TABLE_SELECTION = new Color(0x443124);
+    private static final Color TABLE_SELECTION = new Color(0x3A2D12);
+    private static final Color TABLE_ALT = new Color(0x161B24);
 
-    public static final Color BG = new Color(0x101318);
-    public static final Color SURFACE = new Color(0x191E26);
-    public static final Color INPUT = new Color(0x11161D);
-    public static final Color LINE = new Color(0x343D4B);
-    public static final Color TEXT = new Color(0xF3F4F6);
-    public static final Color MUTED = new Color(0xAAB4C3);
-    public static final Color ACCENT = new Color(0xFF7842);
-    public static final Color SUCCESS = new Color(0x76DEB2);
-    public static final Color ERROR = new Color(0xFF9696);
+    public static final Color BG = NfsPalette.BG;
+    public static final Color SURFACE = NfsPalette.SURFACE;
+    public static final Color INPUT = NfsPalette.INPUT;
+    public static final Color LINE = NfsPalette.LINE;
+    public static final Color TEXT = NfsPalette.TEXT;
+    public static final Color MUTED = NfsPalette.MUTED;
+    public static final Color ACCENT = NfsPalette.AMBER;
+    public static final Color SUCCESS = NfsPalette.SUCCESS;
+    public static final Color ERROR = NfsPalette.ERROR;
     public static final int SPACE = 8;
-    public static final int CONTROL_H = 46;
-    public static final Font BODY = new Font("Segoe UI", Font.PLAIN, 14);
-    public static final Font SMALL = BODY.deriveFont(12f);
-    public static final Font STRONG = BODY.deriveFont(Font.BOLD);
-    public static final Font TITLE = new Font("Bahnschrift", Font.BOLD, 32);
+    /** Height of buttons and inputs, including the glow margin reserved around them. */
+    public static final int CONTROL_H = 52;
+    public static final Font BODY = NfsFonts.body(15f);
+    public static final Font SMALL = NfsFonts.strong(13.5f);
+    public static final Font STRONG = NfsFonts.strong(15f);
+    public static final Font TITLE = NfsFonts.display(34f);
+
     private GameTheme() { }
 
+    /** Installs FlatLaf (dark) plus the NFS overrides. Call once, before creating any window. */
     public static void install() {
-        try { UIManager.setLookAndFeel(UIManager.getCrossPlatformLookAndFeelClassName()); }
-        catch (Exception e) { throw new IllegalStateException("Không khởi tạo được giao diện game", e); }
-        for (String key : new String[]{"Panel.background", "OptionPane.background", "Viewport.background"}) UIManager.put(key, BG);
-        for (String key : new String[]{"Label.foreground", "OptionPane.messageForeground", "Table.foreground", "Button.foreground"}) UIManager.put(key, TEXT);
-        for (String key : new String[]{"Label.font", "Button.font", "TextField.font", "PasswordField.font", "Table.font", "OptionPane.messageFont"}) UIManager.put(key, BODY);
+        UIManager.put("defaultFont", BODY);
+        FlatLaf.setGlobalExtraDefaults(Map.of("@accentColor", "#FFB000", "@background", "#0A0D13", "@foreground", "#F5F2EA"));
+        if (!FlatDarkLaf.setup()) throw new IllegalStateException("Không khởi tạo được giao diện game");
+        for (String key : new String[]{"Component.arc", "Button.arc", "TextComponent.arc", "ProgressBar.arc", "CheckBox.arc"}) UIManager.put(key, 0);
+        for (String key : new String[]{"Panel.background", "OptionPane.background", "Viewport.background", "RootPane.background"}) UIManager.put(key, BG);
+        UIManager.put("Component.focusColor", ACCENT);
+        UIManager.put("Component.focusedBorderColor", ACCENT);
         UIManager.put("Button.background", SURFACE);
+        UIManager.put("Button.default.background", ACCENT);
+        UIManager.put("Button.default.foreground", NfsPalette.VOID);
+        UIManager.put("ScrollBar.width", 12);
+        UIManager.put("ScrollBar.thumbArc", 0);
+        UIManager.put("ScrollBar.showButtons", false);
+        UIManager.put("ScrollBar.thumb", NfsPalette.mix(LINE, ACCENT, 0.25f));
+        UIManager.put("ScrollBar.hoverThumbColor", ACCENT);
+        UIManager.put("ScrollBar.track", NfsPalette.VOID);
         UIManager.put("Table.background", SURFACE);
         UIManager.put("Table.selectionBackground", TABLE_SELECTION);
         UIManager.put("Table.selectionForeground", TEXT);
         UIManager.put("TableHeader.background", INPUT);
         UIManager.put("TableHeader.foreground", MUTED);
-        UIManager.put("TableHeader.font", STRONG);
-        UIManager.put("ScrollBar.thumb", LINE);
-        UIManager.put("ScrollBar.track", BG);
+        UIManager.put("TableHeader.font", SMALL);
         UIManager.put("ProgressBar.foreground", ACCENT);
         UIManager.put("ProgressBar.background", INPUT);
+        UIManager.put("ToolTip.background", NfsPalette.SURFACE_HI);
+        UIManager.put("ToolTip.foreground", TEXT);
+        UIManager.put("ToolTip.border", BorderFactory.createLineBorder(ACCENT));
+        UIManager.put("OptionPane.messageForeground", TEXT);
+        UIManager.put("OptionPane.messageFont", BODY);
+        UIManager.put("OptionPane.buttonFont", STRONG);
+        UIManager.put("OptionPane.border", BorderFactory.createEmptyBorder(16, 20, 16, 20));
     }
 
     public static JPanel panel(LayoutManager layout) {
@@ -63,9 +90,10 @@ public final class GameTheme {
         return panel;
     }
 
+    /** Label whose font follows the window scale (see {@link Responsive}). */
     public static JLabel label(String text, Font font, Color color) {
-        JLabel label = new JLabel(text);
-        label.setFont(font);
+        JLabel label = new JLabel(NfsFonts.safe(text));
+        Responsive.font(label, font);
         label.setForeground(color);
         label.setAlignmentX(Component.LEFT_ALIGNMENT);
         return label;
@@ -75,166 +103,123 @@ public final class GameTheme {
         return label(text, TITLE, TEXT);
     }
 
+    /** Small tracked amber kicker above a heading. */
     public static JLabel eyebrow(String text) {
-        return label(text, STRONG.deriveFont(12f), ACCENT);
+        return label(text, NfsFonts.tracked(NfsFonts.strong(13f), 0.2f), ACCENT);
     }
 
+    /** Vertical space that scales with the window. */
     public static void gap(JPanel panel, int size) {
-        panel.add(Box.createVerticalStrut(size));
+        Box.Filler filler = new Box.Filler(new Dimension(0, size), new Dimension(0, size), new Dimension(Short.MAX_VALUE, size));
+        panel.add(Responsive.height(filler, size));
     }
+
     public static void fullWidth(JComponent c, int height) {
         c.setAlignmentX(Component.LEFT_ALIGNMENT);
         c.setMinimumSize(new Dimension(0, height));
         c.setMaximumSize(new Dimension(Integer.MAX_VALUE, height));
         c.setPreferredSize(new Dimension(320, height));
+        Responsive.height(c, height);
     }
+
     public static JPanel card(LayoutManager layout, int padding) {
-        JPanel panel = new JPanel(layout);
-        panel.setBackground(SURFACE);
-        panel.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(LINE),
-                BorderFactory.createEmptyBorder(padding, padding, padding, padding)));
+        ChamferPanel panel = new ChamferPanel(layout, 16);
+        panel.setBorder(BorderFactory.createEmptyBorder(padding, padding, padding, padding));
         return panel;
     }
-    public static void field(JTextComponent field) {
-        if (field instanceof JPasswordField passwordField) {
-            passwordField.setUI(new BasicPasswordFieldUI());
-        } else if (field instanceof JTextField textField) {
-            textField.setUI(new BasicTextFieldUI());
-        }
-        field.setFont(BODY);
-        field.setForeground(TEXT);
-        field.setBackground(INPUT);
-        field.setCaretColor(ACCENT);
-        field.setSelectionColor(new Color(0x634332));
-        field.setDisabledTextColor(MUTED);
-        field.setBorder(fieldBorder(LINE));
-        fullWidth(field, CONTROL_H);
-        field.addFocusListener(new FocusAdapter() {
-            @Override
-            public void focusGained(FocusEvent event) {
-                field.setBorder(fieldBorder(ACCENT));
-            }
 
-            @Override
-            public void focusLost(FocusEvent event) {
-                field.setBorder(fieldBorder(LINE));
-            }
-        });
-    }
-    private static Border fieldBorder(Color color) {
-        return BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(color),
-                BorderFactory.createEmptyBorder(10, 12, 10, 12));
+    public static void field(JTextComponent field) {
+        NfsFieldUI.apply(field);
+        Responsive.font(field, NfsFonts.body(17f));
+        fullWidth(field, CONTROL_H);
     }
 
     public static void formField(JPanel panel, String title, JTextComponent field) {
-        JLabel label = label(title, SMALL, MUTED);
+        JLabel label = label(title, NfsFonts.tracked(NfsFonts.strong(13.5f), 0.14f), MUTED);
+        label.setBorder(BorderFactory.createEmptyBorder(0, ChamferButton.GLOW, 0, 0));
         label.setLabelFor(field);
         panel.add(label);
-        gap(panel, SPACE);
+        gap(panel, 2);
         field(field);
         panel.add(field);
         gap(panel, SPACE * 2);
     }
 
     public static JButton button(String text, boolean primary) {
-        return new GameButton(text, primary);
+        return new ChamferButton(text, primary);
     }
+
     public static void decorate(Window window) {
-        BufferedImage icon = new BufferedImage(32,32,BufferedImage.TYPE_INT_ARGB);
-        Graphics2D g = icon.createGraphics(); g.setColor(BG); g.fillRect(0,0,32,32);
-        g.setColor(ACCENT); g.fillPolygon(new int[]{6,14,23,15},new int[]{26,6,6,26},4);
-        g.setColor(TEXT); g.fillPolygon(new int[]{18,23,28,23},new int[]{26,14,14,26},4); g.dispose();
+        BufferedImage icon = new BufferedImage(64, 64, BufferedImage.TYPE_INT_ARGB);
+        Graphics2D g = icon.createGraphics();
+        g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+        g.setColor(NfsPalette.VOID);
+        g.fillPolygon(new int[]{0, 64, 64, 14}, new int[]{0, 0, 64, 64}, 4);
+        g.setColor(ACCENT);
+        g.fillPolygon(new int[]{12, 30, 52, 34}, new int[]{52, 12, 12, 52}, 4);
+        g.setColor(NfsPalette.RED);
+        g.fillPolygon(new int[]{38, 48, 58, 48}, new int[]{52, 28, 28, 52}, 4);
+        g.dispose();
         window.setIconImage(icon);
     }
+
     public static String html(String s) {
-        return s == null ? "" : s.replace("&","&amp;").replace("<","&lt;").replace(">","&gt;").replace("\"","&quot;");
+        return s == null ? "" : s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace("\"", "&quot;");
     }
+
     public static void status(JLabel label, String text, Color color) {
-        label.setForeground(color); label.setFont(SMALL);
-        label.setText("<html>" + html(text) + "</html>");
+        label.setForeground(color);
+        Responsive.font(label, SMALL);
+        label.setText("<html>" + html(NfsFonts.safe(text)) + "</html>");
     }
+
     public static void table(JTable t) {
-        t.setFont(BODY); t.setForeground(TEXT); t.setBackground(SURFACE);
-        t.setRowHeight(48); t.setShowGrid(false); t.setIntercellSpacing(new Dimension(0,0));
-        t.setSelectionBackground(TABLE_SELECTION); t.setSelectionForeground(TEXT);
-        t.setFillsViewportHeight(true); t.getTableHeader().setReorderingAllowed(false);
-        t.getTableHeader().setPreferredSize(new Dimension(100,40));
+        t.setFont(BODY);
+        t.setForeground(TEXT);
+        t.setBackground(SURFACE);
+        Responsive.rowHeight(t, 48);
+        t.setShowGrid(false);
+        t.setIntercellSpacing(new Dimension(0, 0));
+        t.setSelectionBackground(TABLE_SELECTION);
+        t.setSelectionForeground(TEXT);
+        t.setFillsViewportHeight(true);
+        t.getTableHeader().setReorderingAllowed(false);
+        t.getTableHeader().setPreferredSize(new Dimension(100, 40));
         t.getTableHeader().setDefaultRenderer(new DefaultTableCellRenderer() {
             @Override
-            public Component getTableCellRendererComponent(JTable table,Object value,boolean selected,boolean focus,int row,int col) {
-                super.getTableCellRendererComponent(table,value,selected,focus,row,col);
-                setBackground(INPUT); setForeground(MUTED); setFont(STRONG.deriveFont(12f));
-                setBorder(BorderFactory.createEmptyBorder(0,16,0,16)); return this;
+            public Component getTableCellRendererComponent(JTable table, Object value, boolean selected, boolean focus, int row, int col) {
+                super.getTableCellRendererComponent(table, value, selected, focus, row, col);
+                setBackground(INPUT);
+                setForeground(ACCENT);
+                setFont(NfsFonts.tracked(NfsFonts.strong(12.5f), 0.14f));
+                setBorder(BorderFactory.createCompoundBorder(BorderFactory.createMatteBorder(0, 0, 2, 0, ACCENT),
+                        BorderFactory.createEmptyBorder(0, 16, 0, 16)));
+                return this;
             }
         });
         DefaultTableCellRenderer renderer = new DefaultTableCellRenderer() {
             @Override
-            public Component getTableCellRendererComponent(JTable table,Object value,boolean selected,boolean focus,int row,int col) {
-                super.getTableCellRendererComponent(table,value,selected,focus,row,col);
-                setFont(col==0 ? STRONG : BODY);
-                setBackground(selected ? TABLE_SELECTION : (row%2==0 ? SURFACE : new Color(0x1D232D)));
+            public Component getTableCellRendererComponent(JTable table, Object value, boolean selected, boolean focus, int row, int col) {
+                super.getTableCellRendererComponent(table, value, selected, focus, row, col);
+                setFont(col == 0 ? STRONG : BODY);
+                setBackground(selected ? TABLE_SELECTION : (row % 2 == 0 ? SURFACE : TABLE_ALT));
                 setForeground(TEXT);
                 setHorizontalAlignment(value instanceof Number ? RIGHT : LEFT);
-                setBorder(BorderFactory.createCompoundBorder(BorderFactory.createMatteBorder(0,0,1,0,LINE),BorderFactory.createEmptyBorder(0,16,0,16)));
-                if (focus) setBorder(BorderFactory.createCompoundBorder(BorderFactory.createLineBorder(ACCENT),BorderFactory.createEmptyBorder(0,15,0,15)));
+                setBorder(BorderFactory.createCompoundBorder(BorderFactory.createMatteBorder(0, 0, 1, 0, LINE),
+                        BorderFactory.createEmptyBorder(0, 16, 0, 16)));
+                if (focus) setBorder(BorderFactory.createCompoundBorder(BorderFactory.createLineBorder(ACCENT), BorderFactory.createEmptyBorder(0, 15, 0, 15)));
                 return this;
             }
         };
-        t.setDefaultRenderer(Object.class,renderer); t.setDefaultRenderer(Integer.class,renderer);
+        t.setDefaultRenderer(Object.class, renderer);
+        t.setDefaultRenderer(Integer.class, renderer);
     }
+
     public static JScrollPane scroll(JTable table) {
         JScrollPane scrollPane = new JScrollPane(table);
         scrollPane.setBorder(BorderFactory.createLineBorder(LINE));
         scrollPane.getViewport().setBackground(SURFACE);
         scrollPane.setBackground(SURFACE);
         return scrollPane;
-    }
-    private static final class GameButton extends JButton {
-        private final boolean primary;
-
-        GameButton(String text, boolean primary) {
-            super(text);
-            this.primary = primary;
-            setFont(STRONG);
-            setForeground(primary ? BG : TEXT);
-            setContentAreaFilled(false);
-            setBorderPainted(false);
-            setFocusPainted(false);
-            setOpaque(false);
-            setBorder(BorderFactory.createEmptyBorder(12, 20, 12, 20));
-            setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-            Insets insets = getInsets();
-            int textWidth = getFontMetrics(getFont()).stringWidth(text);
-            setPreferredSize(new Dimension(textWidth + insets.left + insets.right + SPACE * 2, CONTROL_H));
-        }
-
-        @Override
-        protected void paintComponent(Graphics graphics) {
-            Graphics2D g = (Graphics2D) graphics.create();
-            g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-            Color fill = primary ? ACCENT : SURFACE;
-            if (!isEnabled()) {
-                fill = LINE;
-            } else if (getModel().isPressed()) {
-                fill = primary ? new Color(0xDA5927) : LINE;
-            } else if (getModel().isRollover()) {
-                fill = primary ? new Color(0xFF966A) : new Color(0x293342);
-            }
-            g.setColor(fill);
-            g.fillRoundRect(0, 0, getWidth(), getHeight(), 8, 8);
-            if (!primary || hasFocus()) {
-                g.setColor(hasFocus() ? ACCENT : LINE);
-                g.setStroke(new BasicStroke(hasFocus() ? 2 : 1));
-                g.drawRoundRect(1, 1, getWidth() - 3, getHeight() - 3, 8, 8);
-            }
-            if (hasFocus() && primary) {
-                g.setColor(BG);
-                g.drawRoundRect(4, 4, getWidth() - 9, getHeight() - 9, 6, 6);
-            }
-            g.dispose();
-            super.paintComponent(graphics);
-        }
     }
 }
