@@ -1,6 +1,7 @@
 package racing.client.ui.race;
 
 import racing.client.ui.theme.Chamfer;
+import racing.client.ui.theme.Motion;
 import racing.client.ui.theme.NfsFonts;
 import racing.client.ui.theme.NfsPalette;
 
@@ -24,6 +25,7 @@ import java.util.Map;
  * the per-frame work is one scaled blit with a pop-in / fade-out animation and, on GO, a flash.
  */
 final class RaceCountdown {
+    private static final double PUNCH_S = 0.30;
     private final Map<String, BufferedImage> words = new HashMap<>();
     private float builtFor = -1;
     private BufferedImage flash, band;
@@ -60,11 +62,15 @@ final class RaceCountdown {
         if (img == null) {
             img = word(text, u);
             words.put(text, img);
+            nowNanos = System.nanoTime();   // the bake takes a while: start the punch-in from its first visible frame
+            stampNanos = nowNanos;
         }
         boolean go = text.startsWith("GO");
         double age = Math.max(0, (nowNanos - stampNanos) / 1e9);
-        double scale = go ? 1 + age * 0.55 : 1 + 0.55 * Math.exp(-age * 11);
-        double alpha = go ? 1 - Math.max(0, age - 0.28) / 0.32 : (age < 0.72 ? 1 : Math.max(0.1, 1 - (age - 0.72) / 0.28));
+        // numbers punch in: big and transparent, slam to a slight undershoot (OUT_BACK), settle at 1
+        double scale = go ? 1 + age * 0.55 : 1.75 - 0.75 * Motion.OUT_BACK.apply((float) Math.min(1, age / PUNCH_S));
+        double alpha = go ? 1 - Math.max(0, age - 0.28) / 0.32
+                : age < 0.12 ? age / 0.12 : (age < 0.72 ? 1 : Math.max(0.1, 1 - (age - 0.72) / 0.28));
         if (band == null || bandW != w) {
             band = band(w, Math.round(img.getHeight() * 0.8f));
             bandW = w;

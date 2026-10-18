@@ -36,6 +36,7 @@ final class TrackView {
     private final boolean rival;
     private final RaceDecor decor;
     private final RaceFx fx = new RaceFx();
+    private final RaceBurst burst;
     private final Set<Integer> destroyed = new HashSet<>();
     private final List<Explosion> explosions = new ArrayList<>();
 
@@ -44,6 +45,11 @@ final class TrackView {
     private long targetStampNanos;
     private double laneX = 1;
     private long lastFrameNanos;
+    /** Speed shown by the gauge: eases toward the car's speed instead of jumping (20 Hz rival updates, crash stop). */
+    private double shownSpeed;
+    private boolean wasFinished;
+    private double hitM;
+    private int hitLane;
 
     /** Giữ chữ ký cũ: {@code carSprite == PixelArt.OPPONENT} nghĩa là khung nhìn của đối thủ. */
     TrackView(CarModel car, BufferedImage carSprite, int decorSeed) {
@@ -54,6 +60,7 @@ final class TrackView {
         this.car = car;
         this.rival = rival;
         this.decor = new RaceDecor(decorSeed);
+        this.burst = new RaceBurst(decorSeed * 31 + 7);
     }
 
     CarModel car() {
@@ -65,6 +72,10 @@ final class TrackView {
         return renderDist;
     }
 
+    double shownSpeed() {
+        return shownSpeed;
+    }
+
     void resetRound() {
         destroyed.clear();
         explosions.clear();
@@ -73,6 +84,9 @@ final class TrackView {
         targetStampNanos = 0;
         lastFrameNanos = 0;
         laneX = car.lane();
+        shownSpeed = car.speed();
+        wasFinished = car.finished();
+        burst.reset();
     }
 
     /** Xe vừa bị va chạm: nổ ở đầu xe, xe cộ gần nhất cùng làn biến mất. */
@@ -98,7 +112,10 @@ final class TrackView {
         if (best >= 0) {
             destroyed.add(best);
         }
-        explosions.add(new Explosion(d + GameConfig.CAR_LENGTH * 0.8, car.lane(), nowMillis));
+        hitM = d + GameConfig.CAR_LENGTH * 0.8;
+        hitLane = car.lane();
+        explosions.add(new Explosion(hitM, hitLane, nowMillis));
+        burst.hit(nowMillis);
     }
 
     static double trafficPos(Obstacle o, double tickF) {
@@ -121,6 +138,10 @@ final class TrackView {
         // Render the camera continuously rather than stepping to every arriving 20 Hz snapshot.
         // Only resetRound may move the camera backwards.
         if (desired > renderDist) renderDist += (desired-renderDist)*(1-Math.exp(-dt*24));
+        shownSpeed += (car.speed() - shownSpeed) * (1 - Math.exp(-dt * 9));
+        if (Math.abs(car.speed() - shownSpeed) < 0.5) {
+            shownSpeed = car.speed();
+        }
         laneX += (car.lane() - laneX) * Math.min(1, dt * 14);
         if (Math.abs(car.lane() - laneX) < 0.01) {
             laneX = car.lane();
@@ -148,6 +169,12 @@ final class TrackView {
         double bottomM = renderDist - (y + h - anchorY) / pxPerM;
         double topM = renderDist + (anchorY - y) / pxPerM;
         double speedRatio = Math.min(1, car.speed() / GameConfig.MAX_SPEED);
+        if (car.finished() != wasFinished) {
+            wasFinished = car.finished();
+            if (wasFinished) burst.finish(nowMillis);
+        }
+        int jx = burst.shakeX(nowMillis, sp.s), jy = burst.shakeY(nowMillis, sp.s);
+        g.translate(jx, jy);   // collision jolt: world layers only, the vignette stays put
 
         BufferedImage ground = sp.ground();
         if ((SKIP & 1) == 0) tileVertical(g, ground, x, y, w, h, anchorY, camPx, ground.getWidth());
@@ -174,13 +201,14 @@ final class TrackView {
         }
 
         if ((SKIP & 32) == 0) fx.drawStreaks(g, sp, x, y, w, h, roadX, camPx, speedRatio);
+        if ((SKIP & 32) == 0) fx.drawRush(g, sp, y, h, roadX, camPx, shownSpeed);
 
         // xe của khung nhìn, nhấp nháy khi đang bị choáng
         boolean blinkOff = car.stunned() && (nowMillis / 90) % 2 == 0;
+        int cx = roadX + (int) Math.round(laneX * sp.laneW) + sp.laneW / 2;
+        int noseY = screenY(renderDist + GameConfig.CAR_LENGTH, anchorY, pxPerM);
         if (!blinkOff) {
             BufferedImage img = sp.racer(rival);
-            int cx = roadX + (int) Math.round(laneX * sp.laneW) + sp.laneW / 2;
-            int noseY = screenY(renderDist + GameConfig.CAR_LENGTH, anchorY, pxPerM);
             if (!car.stunned() && !car.finished()) {
                 BufferedImage beam = sp.beam();
                 g.setComposite(RaceGfx.alpha(0.55 + 0.45 * speedRatio));
@@ -191,8 +219,11 @@ final class TrackView {
         }
 
         drawExplosions(g, sp, roadX, anchorY, pxPerM, nowMillis);
+        burst.drawImpact(g, sp, roadX + hitLane * sp.laneW + sp.laneW / 2, screenY(hitM, anchorY, pxPerM), nowMillis);
         if ((SKIP & 256) == 0) decor.drawLamps(g, sp, roadX, y, h, anchorY, renderDist);
+        g.translate(-jx, -jy);
         if ((SKIP & 128) == 0) fx.drawVignette(g, x, y, w, h);
+        burst.drawFinish(g, sp, x, y, w, h, cx, screenY(renderDist + GameConfig.CAR_LENGTH / 2, anchorY, pxPerM), nowMillis);
     }
 
     private void drawBanners(Graphics2D g, RaceSprites sp, int roadX, int anchorY, double bottomM, double topM, double pxPerM) {
