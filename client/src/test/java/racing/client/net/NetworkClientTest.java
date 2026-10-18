@@ -73,6 +73,33 @@ class NetworkClientTest {
     }
 
     @Test
+    void slowReaderDoesNotFreezeSwing() throws Exception {
+        CountDownLatch returned = new CountDownLatch(1);
+        String payload = "x".repeat(1024 * 1024);
+        SwingUtilities.invokeLater(() -> {
+            for (int i = 0; i < 32; i++) {
+                client.send(new Message(MessageType.ERROR, payload));
+            }
+            returned.countDown();
+        });
+        boolean responsive = returned.await(1, TimeUnit.SECONDS);
+        accepted.close();
+        assertTrue(returned.await(5, TimeUnit.SECONDS));
+        assertTrue(responsive, "socket writes must not block the Swing event thread when a peer stops reading");
+    }
+
+    @Test
+    void queuedControlMessagesKeepWireOrder() throws Exception {
+        accepted.setSoTimeout(5000);
+        client.send(new Message(MessageType.INVITE,"bob"));
+        client.send(new Message(MessageType.CAR_STATE,new racing.common.dto.CarState(4,1,100)));
+        client.send(Message.of(MessageType.FINISH));
+        assertEquals(MessageType.INVITE,((Message)serverIn.readObject()).getType());
+        assertEquals(MessageType.CAR_STATE,((Message)serverIn.readObject()).getType());
+        assertEquals(MessageType.FINISH,((Message)serverIn.readObject()).getType());
+    }
+
+    @Test
     void listenerFiresOnEdtWithPayload() throws Exception {
         CountDownLatch latch = new CountDownLatch(1);
         AtomicBoolean onEdt = new AtomicBoolean(false);

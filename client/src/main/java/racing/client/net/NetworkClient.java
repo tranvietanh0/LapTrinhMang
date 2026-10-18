@@ -18,10 +18,12 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.function.Consumer;
 
 /**
- * Lớp mạng phía client: một socket TCP, luồng đọc {@code readObject}, gửi có khóa,
+ * Lớp mạng phía client: một socket TCP, luồng đọc {@code readObject}, hàng đợi gửi FIFO,
  * listener theo {@link MessageType}. Mọi listener đều được gọi trên luồng Swing (EDT)
  * nên các màn hình cập nhật giao diện trực tiếp, không cần {@code invokeLater} nữa.
  *
@@ -41,12 +43,13 @@ public final class NetworkClient implements AutoCloseable {
     private final List<Consumer<Message>> anyListeners = new CopyOnWriteArrayList<>();
     private final List<Runnable> disconnectListeners = new CopyOnWriteArrayList<>();
     private final AtomicBoolean closed = new AtomicBoolean(false);
-    private final Object sendLock = new Object();
+    private final BlockingQueue<Message> outbox = new LinkedBlockingQueue<>(256);
 
     private Socket socket;
     private ObjectOutputStream out;
     private ObjectInputStream in;
     private ScheduledExecutorService heartbeat;
+    private Thread writer;
 
     /** Kết nối tới server. Ném IOException nếu không nối được trong 5 giây. */
     public void connect(String host, int port) throws IOException {
@@ -54,11 +57,22 @@ public final class NetworkClient implements AutoCloseable {
             throw new IllegalStateException("đã kết nối");
         }
         Socket s = new Socket();
-        s.connect(new InetSocketAddress(host, port), CONNECT_TIMEOUT_MS);
-        socket = s;
-        out = new ObjectOutputStream(s.getOutputStream());
-        out.flush();
-        in = new ObjectInputStream(s.getInputStream());
+        try {
+            s.connect(new InetSocketAddress(host, port), CONNECT_TIMEOUT_MS);
+            s.setTcpNoDelay(true);
+            s.setSoTimeout(CONNECT_TIMEOUT_MS);
+            out = new ObjectOutputStream(s.getOutputStream());
+            out.flush();
+            in = new ObjectInputStream(s.getInputStream());
+            s.setSoTimeout(0);
+            socket = s;
+        } catch (IOException | RuntimeException e) {
+            s.close();
+            throw e;
+        }
+        writer = new Thread(this::writeLoop,"net-writer");
+        writer.setDaemon(true);
+        writer.start();
 
         Thread reader = new Thread(this::readLoop, "net-reader");
         reader.setDaemon(true);
@@ -77,20 +91,12 @@ public final class NetworkClient implements AutoCloseable {
         return socket != null && !closed.get();
     }
 
-    /** Gửi một thông điệp. An toàn khi gọi từ mọi luồng. Lỗi ghi được coi là mất kết nối. */
+    /** Xếp hàng gửi, không chặn EDT. Hàng đợi đầy hoặc lỗi ghi được coi là mất kết nối. */
     public void send(Message m) {
         if (!isConnected()) {
             return;
         }
-        synchronized (sendLock) {
-            try {
-                out.writeObject(m);
-                out.reset();          // tránh ObjectOutputStream cache đối tượng cũ
-                out.flush();
-            } catch (IOException e) {
-                handleDisconnect();
-            }
-        }
+        if (!outbox.offer(m)) handleDisconnect();
     }
 
     /** Đăng ký listener cho một loại thông điệp. Trả về hàm huỷ đăng ký. */
@@ -121,6 +127,18 @@ public final class NetworkClient implements AutoCloseable {
     }
 
     // ------------------------------------------------------------------ nội bộ
+
+    private void writeLoop() {
+        try {
+            while (!closed.get()) {
+                Message m=outbox.take();
+                out.writeObject(m);
+                out.reset();
+                out.flush();
+            }
+        } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
+        catch (IOException e) { handleDisconnect(); }
+    }
 
     private void readLoop() {
         try {
@@ -160,6 +178,8 @@ public final class NetworkClient implements AutoCloseable {
         if (heartbeat != null) {
             heartbeat.shutdownNow();
         }
+        if(writer!=null) writer.interrupt();
+        outbox.clear();
         try {
             if (socket != null) {
                 socket.close();
