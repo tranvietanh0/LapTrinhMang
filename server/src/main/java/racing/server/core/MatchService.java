@@ -6,6 +6,8 @@ import racing.server.db.PlayerRecord;
 
 import java.sql.SQLException;
 import java.util.Optional;
+import java.util.concurrent.Executor;
+import java.util.concurrent.RejectedExecutionException;
 
 /**
  * Ghi trận vào DB và cập nhật điểm vào phiên: tạo bản ghi khi ván bắt đầu, chốt kết quả
@@ -16,10 +18,16 @@ public final class MatchService {
 
     private final MatchRepository matches;
     private final PlayerRepository players;
+    private final Executor eventWriter;
 
     public MatchService(MatchRepository matches, PlayerRepository players) {
+        this(matches,players,Runnable::run);
+    }
+
+    public MatchService(MatchRepository matches, PlayerRepository players, Executor eventWriter) {
         this.matches = matches;
         this.players = players;
+        this.eventWriter=eventWriter;
     }
 
     public int createMatch(String roomCode, Session a, Session b) throws SQLException {
@@ -38,10 +46,14 @@ public final class MatchService {
     }
 
     public void event(int matchId, Session s, String type, String json) {
+        int playerId=s.playerId();
         try {
-            matches.addEvent(matchId, s.playerId(), type, json);
-        } catch (SQLException e) {
-            Log.warn("không ghi được match_events " + type + " cho trận " + matchId, e);
+            eventWriter.execute(()->{
+                try { matches.addEvent(matchId,playerId,type,json); }
+                catch(SQLException e) { Log.warn("không ghi được match_events "+type+" cho trận "+matchId,e); }
+            });
+        } catch (RejectedExecutionException e) {
+            Log.warn("hàng đợi ghi match_events đã dừng, sự kiện "+type+" trận "+matchId,e);
         }
     }
 

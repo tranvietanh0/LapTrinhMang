@@ -43,6 +43,9 @@ public final class GameServer {
         t.setDaemon(true);
         return t;
     });
+    private final ExecutorService eventWriter=Executors.newSingleThreadExecutor(r->{
+        Thread t=new Thread(r,"match-event-writer"); t.setDaemon(true); return t;
+    });
     private ServerSocket serverSocket;
     private Thread acceptor;
     private volatile boolean running;
@@ -55,7 +58,7 @@ public final class GameServer {
             return t;
         });
         SessionManager sessions = new SessionManager(players);
-        MatchService matchService = new MatchService(matches, players);
+        MatchService matchService = new MatchService(matches, players, eventWriter);
         this.rooms = new RoomManager(sessions, matchService, scheduler, System::currentTimeMillis);
         this.invites = new InviteManager(sessions, rooms, System::currentTimeMillis);
         AccountService accounts = new AccountService(players, matches);
@@ -118,6 +121,10 @@ public final class GameServer {
         }
         scheduler.shutdownNow();
         pool.shutdownNow();
+        eventWriter.shutdown();
+        try {
+            if(!eventWriter.awaitTermination(10,TimeUnit.SECONDS)) Log.warn("ghi diễn biến chưa hoàn tất khi dừng server");
+        } catch(InterruptedException e) { Thread.currentThread().interrupt(); }
         Log.info("server đã dừng");
     }
 
