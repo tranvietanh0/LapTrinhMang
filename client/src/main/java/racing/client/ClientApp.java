@@ -22,8 +22,10 @@ public final class ClientApp {
     private final String defaultHost;
     private final int defaultPort;
 
-    private NetworkClient net;
-    private boolean loggingOut;
+    private volatile NetworkClient net;
+    private String connectedHost;
+    private int connectedPort;
+    private volatile boolean loggingOut;
 
     public ClientApp(String defaultHost, int defaultPort) {
         this.defaultHost = defaultHost;
@@ -43,14 +45,17 @@ public final class ClientApp {
     }
 
     /** Mở kết nối nếu chưa có (hoặc kết nối cũ đã đứt). Ném IOException khi không nối được. */
-    public NetworkClient ensureConnected(String host, int port) throws IOException {
-        if (net != null && net.isConnected()) {
+    public synchronized NetworkClient ensureConnected(String host, int port) throws IOException {
+        if (net != null && net.isConnected() && host.equals(connectedHost) && port==connectedPort) {
             return net;
         }
+        if(net!=null) net.close();
         NetworkClient n = new NetworkClient();
         n.connect(host, port);
-        n.onDisconnect(this::onDisconnected);
+        n.onDisconnect(()->{ if(net==n) onDisconnected(); });
+        n.on(MessageType.ONLINE_LIST,m->{ if(net==n) state.setOnline(m.getPayload()); });
         net = n;
+        connectedHost=host; connectedPort=port;
         loggingOut = false;
         return n;
     }
