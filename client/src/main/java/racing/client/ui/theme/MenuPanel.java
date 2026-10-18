@@ -3,15 +3,14 @@ package racing.client.ui.theme;
 import javax.swing.*;
 import java.awt.*;
 
-/** Transparent container whose outer margin follows the window scale. */
-public class MenuPanel extends JPanel {
+/** Transparent container whose outer margin follows the window scale; can stagger its children in ({@link RevealPanel}). */
+public class MenuPanel extends RevealPanel {
     private final int vertical, horizontal;
 
     public MenuPanel(LayoutManager layout, int vertical, int horizontal) {
         super(layout);
         this.vertical = vertical;
         this.horizontal = horizontal;
-        setOpaque(false);
     }
 
     @Override

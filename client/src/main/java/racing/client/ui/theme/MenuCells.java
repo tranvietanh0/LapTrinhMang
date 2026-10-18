@@ -28,6 +28,7 @@ public final class MenuCells {
         boolean selected;
         float scale = 1f;
         private Color tint;
+        private float reveal = 1f, hover;
 
         Cell(IntFunction<Color> stripe) {
             this.stripe = stripe;
@@ -43,6 +44,9 @@ public final class MenuCells {
             col = c;
             scale = Responsive.scaleOf(t);
             tint = stripe == null ? null : stripe.apply(r);
+            TableMotion motion = TableMotion.of(t);
+            reveal = motion == null ? 1f : motion.reveal(r);
+            hover = motion == null ? 0f : motion.hover(r);
             return this;
         }
 
@@ -55,17 +59,24 @@ public final class MenuCells {
             Graphics2D g = (Graphics2D) g0.create();
             MenuPaint.quality(g);
             int w = getWidth(), h = getHeight();
+            Color base = row % 2 == 0 ? NfsPalette.SURFACE : ALT;
             g.setColor(selected ? NfsPalette.mix(NfsPalette.SURFACE, NfsPalette.AMBER, 0.14f)
-                    : (row % 2 == 0 ? NfsPalette.SURFACE : ALT));
+                    : hover > 0f ? NfsPalette.mix(base, NfsPalette.AMBER, 0.08f * hover) : base);
             g.fillRect(0, 0, w, h);
-            Color bar = tint != null ? tint : (selected ? NfsPalette.AMBER : null);
+            Graphics2D fx = (Graphics2D) g.create();
+            if (reveal < 1f) { // row entrance: content fades in while sliding from the left
+                fx.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, reveal));
+                fx.translate(-Math.round((1f - reveal) * p(36)), 0);
+            }
+            Color bar = tint != null ? tint : (selected ? NfsPalette.AMBER : hover > 0f ? NfsPalette.alpha(NfsPalette.AMBER, 0.55f * hover) : null);
             if (col == 0 && bar != null) {
-                g.setColor(bar);
-                g.fillRect(0, 0, p(4), h);
+                fx.setColor(bar);
+                fx.fillRect(0, 0, p(4), h);
             }
             g.setColor(NfsPalette.LINE);
             g.fillRect(0, h - 1, w, 1);
-            paintCell(g, w, h);
+            paintCell(fx, w, h);
+            fx.dispose();
             g.dispose();
         }
 
