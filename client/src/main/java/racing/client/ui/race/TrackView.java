@@ -4,48 +4,38 @@ import racing.client.model.CarModel;
 import racing.common.GameConfig;
 import racing.common.dto.Obstacle;
 
-import java.awt.Color;
 import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Random;
 import java.util.Set;
 
 /**
- * Một nửa màn hình đua: camera cuộn dọc bám theo một xe, vẽ cỏ, cây, nhà, lề đường, mặt đường,
- * vạch làn, vạch xuất phát / đích, xe cộ, xe người chơi và vụ nổ. Toạ độ thế giới tính bằng mét
- * dọc đường đua; xe người chơi đứng yên trên màn hình ở {@link #ANCHOR} chiều cao khung nhìn.
+ * Một nửa màn hình đua: camera cuộn dọc bám theo một xe trên phố đêm (vỉa hè, nóc nhà, đèn đường,
+ * mặt đường có vạch làn, xe cộ, xe người chơi với đèn pha, vụ nổ, vệt tốc độ). Toạ độ thế giới
+ * tính bằng mét dọc đường đua; xe của khung nhìn đứng yên ở {@link #ANCHOR} chiều cao.
+ * Mọi lớp tĩnh là ảnh dựng sẵn theo cỡ ({@link RaceSprites}); mỗi khung hình chỉ blit, không cấp phát.
  * Giữ trạng thái hiển thị riêng (quãng đường nội suy, làn trượt mượt, xe cộ đã bị tông).
  */
 final class TrackView {
 
-    /** Điểm ảnh trên một mét: xe dài 20 m cao 60 px, đúng bằng hình xe. */
+    /** Điểm ảnh logic trên một mét: xe dài 20 m cao 60 px, đúng bằng hình xe. */
     static final double PPM = PixelArt.PLAYER.getHeight() / GameConfig.CAR_LENGTH;
     static final int LANE_W = 84;
     static final int ROAD_W = LANE_W * GameConfig.LANES;
-    private static final int KERB_W = 8;
     /** Đuôi xe người chơi nằm ở 88 % chiều cao khung nhìn, thân xe quanh mốc 3/4. */
     private static final double ANCHOR = 0.88;
     private static final long EXPLOSION_MS = 650;
-    private static final double DECOR_SLOT_M = 14;
-
-    private static final Color KERB = new Color(0x9A9A9A);
-    private static final Color KERB_DARK = new Color(0x6E6E6E);
-    private static final Color EDGE_LINE = new Color(0xEDEDED);
-    private static final Color LANE_DASH = new Color(0xF2C12E);
-    private static final BufferedImage GRASS = tile(256, 128, new Color(0x3FAA3A),
-            new Color(0x369832), new Color(0x4FC24A), 11);
-    private static final BufferedImage ASPHALT = tile(ROAD_W, 128, new Color(0x55575C),
-            new Color(0x4A4C50), new Color(0x63656A), 29);
+    static final int SKIP = Integer.getInteger("race.skip", 0);
 
     private record Explosion(double worldM, int lane, long startMillis) {
     }
 
     private final CarModel car;
-    private final BufferedImage carSprite;
-    private final int decorSeed;
+    private final boolean rival;
+    private final RaceDecor decor;
+    private final RaceFx fx = new RaceFx();
     private final Set<Integer> destroyed = new HashSet<>();
     private final List<Explosion> explosions = new ArrayList<>();
 
@@ -55,10 +45,15 @@ final class TrackView {
     private double laneX = 1;
     private long lastFrameNanos;
 
+    /** Giữ chữ ký cũ: {@code carSprite == PixelArt.OPPONENT} nghĩa là khung nhìn của đối thủ. */
     TrackView(CarModel car, BufferedImage carSprite, int decorSeed) {
+        this(car, carSprite == PixelArt.OPPONENT, decorSeed);
+    }
+
+    TrackView(CarModel car, boolean rival, int decorSeed) {
         this.car = car;
-        this.carSprite = carSprite;
-        this.decorSeed = decorSeed;
+        this.rival = rival;
+        this.decor = new RaceDecor(decorSeed);
     }
 
     CarModel car() {
@@ -132,151 +127,111 @@ final class TrackView {
         }
     }
 
-    /** Vẽ khung nhìn của đường đua vào vùng (x, y, w, h); clip do người gọi đặt. */
+    /** Cỡ ô 28 m (px) phù hợp với khung nhìn này: vừa chiều cao và chiều rộng, lượng tử theo {@link RaceSprites#STEP}. */
+    static int tileSizeFor(int w, int h) {
+        double byH = h / 560.0, byW = w / (ROAD_W + 90.0);
+        return RaceSprites.stepFor(Math.min(byH, byW));
+    }
+
+    /** Vẽ khung nhìn vào vùng (x, y, w, h) với cỡ tự chọn; clip do người gọi đặt. */
     void paint(Graphics2D g, int x, int y, int w, int h, List<Obstacle> obstacles, double tickF, long nowMillis) {
+        paint(g, x, y, w, h, obstacles, tickF, nowMillis, tileSizeFor(w, h));
+    }
+
+    /** Vẽ khung nhìn vào vùng (x, y, w, h) với ô 28 m = {@code n} px; clip do người gọi đặt. */
+    void paint(Graphics2D g, int x, int y, int w, int h, List<Obstacle> obstacles, double tickF, long nowMillis, int n) {
+        RaceSprites sp = RaceSprites.at(n);
+        double pxPerM = n / 28.0;
         int anchorY = y + (int) (h * ANCHOR);
-        double camPx = renderDist * PPM;
-        int roadX = x + (w - ROAD_W) / 2;
+        double camPx = renderDist * pxPerM;
+        int roadX = x + (w - sp.roadW) / 2;
+        double bottomM = renderDist - (y + h - anchorY) / pxPerM;
+        double topM = renderDist + (anchorY - y) / pxPerM;
+        double speedRatio = Math.min(1, car.speed() / GameConfig.MAX_SPEED);
 
-        tileVertical(g, GRASS, x, y, w, h, anchorY, camPx);
-        drawDecor(g, x, roadX, y, h, anchorY);
-        tileVertical(g, ASPHALT, roadX, y, ROAD_W, h, anchorY, camPx);
-
-        double bottomM = renderDist - (y + h - anchorY) / PPM;
-        double topM = renderDist + (anchorY - y) / PPM;
-
-        // lề đường xám có khối sẫm cuộn theo
-        g.setColor(KERB);
-        g.fillRect(roadX - KERB_W, y, KERB_W, h);
-        g.fillRect(roadX + ROAD_W, y, KERB_W, h);
-        g.setColor(KERB_DARK);
-        for (double m = Math.floor(bottomM / 6) * 6; m < topM + 6; m += 6) {
-            int sy = screenY(m + 3, anchorY);
-            g.fillRect(roadX - KERB_W, sy, KERB_W, (int) (3 * PPM));
-            g.fillRect(roadX + ROAD_W, sy, KERB_W, (int) (3 * PPM));
-        }
-        g.setColor(EDGE_LINE);
-        g.fillRect(roadX + 3, y, 3, h);
-        g.fillRect(roadX + ROAD_W - 6, y, 3, h);
-
-        // vạch làn vàng nét đứt
-        g.setColor(LANE_DASH);
-        for (double m = Math.floor(bottomM / 14) * 14; m < topM + 14; m += 14) {
-            int sy = screenY(m + 7, anchorY);
-            for (int i = 1; i < GameConfig.LANES; i++) {
-                g.fillRect(roadX + i * LANE_W - 3, sy, 6, (int) (7 * PPM));
-            }
-        }
-
-        drawStartFinish(g, roadX, anchorY, bottomM, topM);
+        BufferedImage ground = sp.ground();
+        if ((SKIP & 1) == 0) tileVertical(g, ground, x, y, w, h, anchorY, camPx, ground.getWidth());
+        if ((SKIP & 2) == 0) decor.drawCity(g, sp, x, w, roadX, y, h, anchorY, renderDist);
+        BufferedImage road = sp.road();
+        if ((SKIP & 4) == 0) tileVertical(g, road, roadX - sp.kerbW, y, road.getWidth(), h, anchorY, camPx, road.getWidth());
+        if ((SKIP & 8) == 0) decor.drawPools(g, sp, roadX, y, h, anchorY, renderDist);
+        drawBanners(g, sp, roadX, anchorY, bottomM, topM, pxPerM);
 
         // xe cộ trong khung nhìn
+        int padY = sp.px(RaceCarArt.PAD_Y);
         for (int i = 0; i < obstacles.size(); i++) {
             if (destroyed.contains(i)) {
                 continue;
             }
             Obstacle o = obstacles.get(i);
             double p = trafficPos(o, tickF);
-            if (p > topM || p + GameConfig.OBSTACLE_LENGTH < bottomM) {
+            if (p > topM + 6 || p + GameConfig.OBSTACLE_LENGTH < bottomM - 6) {
                 continue;
             }
-            BufferedImage img = PixelArt.traffic(o.kind());
-            int sx = roadX + o.lane() * LANE_W + (LANE_W - img.getWidth()) / 2;
-            g.drawImage(img, sx, screenY(p + GameConfig.OBSTACLE_LENGTH, anchorY), null);
+            BufferedImage img = sp.traffic(o.kind());
+            int cx = roadX + o.lane() * sp.laneW + sp.laneW / 2;
+            g.drawImage(img, cx - img.getWidth() / 2, screenY(p + GameConfig.OBSTACLE_LENGTH, anchorY, pxPerM) - padY, null);
         }
 
-        // xe người chơi, nhấp nháy khi đang bị choáng
+        if ((SKIP & 32) == 0) fx.drawStreaks(g, sp, x, y, w, h, roadX, camPx, speedRatio);
+
+        // xe của khung nhìn, nhấp nháy khi đang bị choáng
         boolean blinkOff = car.stunned() && (nowMillis / 90) % 2 == 0;
         if (!blinkOff) {
-            int cx = roadX + (int) Math.round(laneX * LANE_W) + (LANE_W - carSprite.getWidth()) / 2;
-            g.drawImage(carSprite, cx, screenY(renderDist + GameConfig.CAR_LENGTH, anchorY), null);
+            BufferedImage img = sp.racer(rival);
+            int cx = roadX + (int) Math.round(laneX * sp.laneW) + sp.laneW / 2;
+            int noseY = screenY(renderDist + GameConfig.CAR_LENGTH, anchorY, pxPerM);
+            if (!car.stunned() && !car.finished()) {
+                BufferedImage beam = sp.beam();
+                g.setComposite(RaceGfx.alpha(0.55 + 0.45 * speedRatio));
+                g.drawImage(beam, cx - beam.getWidth() / 2, noseY - beam.getHeight() + sp.px(3), null);
+                g.setComposite(RaceGfx.ALPHA[16]);
+            }
+            g.drawImage(img, cx - img.getWidth() / 2, noseY - padY, null);
         }
 
-        drawExplosions(g, roadX, anchorY, nowMillis);
+        drawExplosions(g, sp, roadX, anchorY, pxPerM, nowMillis);
+        if ((SKIP & 256) == 0) decor.drawLamps(g, sp, roadX, y, h, anchorY, renderDist);
+        if ((SKIP & 128) == 0) fx.drawVignette(g, x, y, w, h);
     }
 
-    private void drawStartFinish(Graphics2D g, int roadX, int anchorY, double bottomM, double topM) {
-        if (0 >= bottomM - 5 && 0 <= topM + 5) {
-            int sy = screenY(0, anchorY);
-            g.setColor(Color.WHITE);
-            g.fillRect(roadX, sy - 4, ROAD_W, 8);
-            PixelArt.drawText(g, "START", roadX + ROAD_W / 2, sy + 10, 3, Color.WHITE, 0);
+    private void drawBanners(Graphics2D g, RaceSprites sp, int roadX, int anchorY, double bottomM, double topM, double pxPerM) {
+        int left = roadX - sp.kerbW - sp.px(18);
+        if (-24 <= topM && 12 >= bottomM) {
+            g.drawImage(sp.startBanner(), left, screenY(0, anchorY, pxPerM) - sp.px(RaceScenery.BANNER_LINE_Y), null);
         }
         double fin = GameConfig.TRACK_LENGTH;
-        if (fin >= bottomM - 10 && fin <= topM + 10) {
-            int sy = screenY(fin, anchorY);
-            int cell = 12;
-            for (int row = 0; row < 3; row++) {
-                for (int cx = 0; cx * cell < ROAD_W; cx++) {
-                    g.setColor((cx + row) % 2 == 0 ? Color.WHITE : Color.BLACK);
-                    g.fillRect(roadX + cx * cell, sy - 18 + row * cell, Math.min(cell, ROAD_W - cx * cell), cell);
-                }
-            }
-            PixelArt.drawText(g, "FINISH", roadX + ROAD_W / 2, sy - 58, 3, Color.WHITE, 0);
+        if (fin - 24 <= topM && fin + 12 >= bottomM) {
+            g.drawImage(sp.finishBanner(), left, screenY(fin, anchorY, pxPerM) - sp.px(RaceScenery.BANNER_LINE_Y), null);
         }
     }
 
-    private void drawExplosions(Graphics2D g, int roadX, int anchorY, long nowMillis) {
-        explosions.removeIf(e -> nowMillis - e.startMillis() > EXPLOSION_MS);
-        for (Explosion e : explosions) {
+    private void drawExplosions(Graphics2D g, RaceSprites sp, int roadX, int anchorY, double pxPerM, long nowMillis) {
+        for (int i = explosions.size() - 1; i >= 0; i--) {
+            if (nowMillis - explosions.get(i).startMillis() > EXPLOSION_MS) {
+                explosions.remove(i);
+            }
+        }
+        for (int i = 0; i < explosions.size(); i++) {
+            Explosion e = explosions.get(i);
             long age = nowMillis - e.startMillis();
-            BufferedImage img = age < 60 || age > 500 ? PixelArt.EXPLOSION_SMALL : PixelArt.EXPLOSION_BIG;
-            int cx = roadX + e.lane() * LANE_W + LANE_W / 2;
-            int cy = screenY(e.worldM(), anchorY);
+            BufferedImage img = sp.explosion(age >= 60 && age <= 500);
+            int cx = roadX + e.lane() * sp.laneW + sp.laneW / 2;
+            int cy = screenY(e.worldM(), anchorY, pxPerM);
+            g.setComposite(RaceGfx.alpha(1.0 - Math.max(0, age - 350) / (double) (EXPLOSION_MS - 350)));
             g.drawImage(img, cx - img.getWidth() / 2, cy - img.getHeight() / 2, null);
         }
+        g.setComposite(RaceGfx.ALPHA[16]);
     }
 
-    /** Cây, bụi, ao, nhà hai bên đường; chọn theo hàm băm vị trí nên cố định, không nhấp nháy. */
-    private void drawDecor(Graphics2D g, int x, int roadX, int y, int h, int anchorY) {
-        int leftW = roadX - KERB_W - x;
-        double bottomM = renderDist - (y + h - anchorY) / PPM - 20;
-        double topM = renderDist + (anchorY - y) / PPM;
-        long first = (long) Math.floor(bottomM / DECOR_SLOT_M);
-        long last = (long) Math.ceil(topM / DECOR_SLOT_M);
-        for (long slot = first; slot <= last; slot++) {
-            for (int side = 0; side < 2; side++) {
-                int hash = hash(slot, side);
-                int kind = Math.floorMod(hash, 100);
-                BufferedImage img;
-                if (kind < 36) {
-                    img = PixelArt.PINE_TREE;
-                } else if (kind < 52) {
-                    img = PixelArt.ROUND_BUSH;
-                } else if (kind < 56) {
-                    img = PixelArt.SMALL_POND;
-                } else if (kind < 63) {
-                    img = PixelArt.RED_HOUSE;
-                } else {
-                    continue;
-                }
-                int room = Math.max(1, leftW - img.getWidth() - 12);
-                int off = 6 + Math.floorMod(hash >>> 8, room);
-                int sx = side == 0 ? roadX - KERB_W - img.getWidth() - off
-                        :roadX + ROAD_W + KERB_W + off;
-                double m = slot * DECOR_SLOT_M + Math.floorMod(hash >>> 16, 8);
-                g.drawImage(img, sx, screenY(m, anchorY) - img.getHeight(), null);
-            }
-        }
-    }
-
-    private int hash(long slot, int side) {
-        long v = slot * 0x9E3779B97F4A7C15L + side * 0xC2B2AE3D27D4EB4FL + decorSeed;
-        v ^= v >>> 31;
-        v *= 0xBF58476D1CE4E5B9L;
-        v ^= v >>> 29;
-        return (int) v;
-    }
-
-    private int screenY(double worldM, int anchorY) {
-        return anchorY - (int) Math.round((worldM - renderDist) * PPM);
+    private int screenY(double worldM, int anchorY, double pxPerM) {
+        return anchorY - (int) Math.round((worldM - renderDist) * pxPerM);
     }
 
     /** Lát ảnh theo chiều dọc, neo theo toạ độ thế giới để cuộn cùng tốc độ với đường. */
     private static void tileVertical(Graphics2D g, BufferedImage tile, int x, int y, int w, int h,
-                                     int anchorY, double camPx) {
+                                     int anchorY, double camPx, int tw) {
         int th = tile.getHeight();
-        int tw = tile.getWidth();
         double topWorld = camPx + (anchorY - y);
         double bottomWorld = camPx - (y + h - anchorY);
         long kFirst = (long) Math.floor(bottomWorld / th);
@@ -284,23 +239,8 @@ final class TrackView {
         for (long k = kFirst; k <= kLast; k++) {
             int sy = anchorY - (int) Math.round((k + 1) * th - camPx);
             for (int sx = x; sx < x + w; sx += tw) {
-                g.drawImage(tile, sx, sy, Math.min(tw, x + w - sx) + sx, sy + th, 0, 0, Math.min(tw, x + w - sx), th, null);
+                g.drawImage(tile, sx, sy, null);
             }
         }
-    }
-
-    /** Ảnh nền có lốm đốm hai màu, lặp liền mạch theo chiều dọc. */
-    private static BufferedImage tile(int w, int h, Color base, Color dark, Color light, long seed) {
-        BufferedImage img = new BufferedImage(w, h, BufferedImage.TYPE_INT_RGB);
-        Graphics2D g = img.createGraphics();
-        g.setColor(base);
-        g.fillRect(0, 0, w, h);
-        Random rnd = new Random(seed);
-        for (int i = 0; i < w * h / 40; i++) {
-            g.setColor(rnd.nextBoolean() ? dark : light);
-            g.fillRect(rnd.nextInt(w / 3) * 3, rnd.nextInt(h / 3) * 3, 3, 3);
-        }
-        g.dispose();
-        return img;
     }
 }

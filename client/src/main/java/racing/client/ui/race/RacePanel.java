@@ -1,19 +1,21 @@
 package racing.client.ui.race;
 
 import racing.client.model.CarModel;
-import racing.common.GameConfig;
+import racing.client.ui.theme.Chamfer;
+import racing.client.ui.theme.NfsFonts;
+import racing.client.ui.theme.NfsPalette;
 import racing.common.dto.Obstacle;
 
 import javax.swing.JPanel;
 import java.awt.BasicStroke;
 import java.awt.Color;
 import java.awt.Dimension;
-import java.awt.Font;
 import java.awt.FontMetrics;
+import java.awt.GradientPaint;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.RenderingHints;
-import java.awt.Stroke;
+import java.awt.image.BufferedImage;
 import java.util.List;
 import java.util.Locale;
 import java.util.concurrent.Executors;
@@ -21,49 +23,39 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 /**
- * Màn hình đua kiểu game đua xe 8-bit cổ điển, chia đôi: trái là đường của mình, phải là đường
- * của đối thủ, mỗi bên một camera cuộn dọc bám theo xe ({@link TrackView}). Trên mỗi bên là thanh
- * HUD đen (tên, km/h, quãng đường, thứ hạng), mép ngoài có bản đồ nhỏ tiến độ của cả hai xe.
+ * Màn hình đua kiểu Need for Speed đường phố, chia đôi: trái là đường của mình, phải là đường của
+ * đối thủ, mỗi bên một camera cuộn dọc bám theo xe ({@link TrackView}). Thanh trên cùng có tên hai
+ * tay đua và tiến độ về đích, dưới mỗi đường là bảng đồng hồ (tốc độ, vị trí, quãng đường).
  * Vẽ lại khoảng 60 lần / giây; xe và xe cộ được nội suy giữa các lần cập nhật 20 Hz của server.
- * Chỉ vẽ, không chứa logic mạng.
+ * Mọi lớp tĩnh là ảnh dựng sẵn theo cỡ cửa sổ; chỉ vẽ, không chứa logic mạng.
  */
 public final class RacePanel extends JPanel {
 
-    private static final int HUD_H = 56;
-    private static final int STATUS_H = 26;
-    private static final int DIVIDER = 6;
-    private static final int MAP_W = 10;
     private static final int FRAME_MS = 16;
-
-    private static final Color BG = Color.BLACK;
-    private static final Color HUD_TEXT = Color.WHITE;
-    private static final Color HUD_ACCENT = new Color(0xFFD23F);
-    private static final Color HUD_DIM = new Color(0x9A9A9A);
-    private static final Color MAP_BG = new Color(0x2B2B2B);
-    private static final Color MAP_ROAD = new Color(0x77797E);
-    private static final Color MY_COLOR = new Color(0xE8392F);
-    private static final Color OPP_COLOR = new Color(0x3C8CF0);
-    private static final Color BOX_FILL = new Color(58, 58, 58, 248);
-    private static final Color STATUS_TEXT = new Color(0xD8D8D8);
-    private static final Font STATUS_FONT = new Font(Font.DIALOG, Font.PLAIN, 13);
-    private static final Stroke BOX_STROKE = new BasicStroke(4f);
+    private static final int MAX_NAME = 14;
+    private static final Color STATUS_DOT = NfsPalette.AMBER;
 
     private final TrackView mine;
     private final TrackView opponent;
+    private final RaceHud hud = new RaceHud();
+    private final RaceCountdown countdown = new RaceCountdown();
     private ScheduledExecutorService frameClock;
     private List<Obstacle> obstacles = List.of();
 
-    private String myName = "YOU";
-    private String opponentName = "RIVAL";
-    private String countdownText = null;   // "3", "2", "1", "GO!" hoặc null
+    private String myName = "BẠN";
+    private String opponentName = "ĐỐI THỦ";
     private String statusText = "";
+    private BufferedImage statusChip;
+    private String statusChipText;
+    private float statusChipScale;
     private final RaceClock raceClock = new RaceClock();
 
     public RacePanel(CarModel myCar, CarModel opponentCar) {
-        this.mine = new TrackView(myCar, PixelArt.PLAYER, 17);
-        this.opponent = new TrackView(opponentCar, PixelArt.OPPONENT, 91);
-        setPreferredSize(new Dimension(1200, 800));
-        setBackground(BG);
+        this.mine = new TrackView(myCar, false, 17);
+        this.opponent = new TrackView(opponentCar, true, 91);
+        setPreferredSize(new Dimension(1200, 780));
+        setBackground(NfsPalette.VOID);
+        setOpaque(true);
         setDoubleBuffered(true);
         setFocusable(true);
     }
@@ -108,7 +100,7 @@ public final class RacePanel extends JPanel {
     }
 
     public void setCountdownText(String text) {
-        this.countdownText = text;
+        countdown.set(text, System.nanoTime());
         repaint();
     }
 
@@ -129,145 +121,138 @@ public final class RacePanel extends JPanel {
         return raceClock.sample(nowNanos);
     }
 
+    /** Hệ số cỡ HUD theo cửa sổ, bước 0,05 để kéo cửa sổ không làm dựng lại liên tục. */
+    static float hudScale(int w, int h) {
+        double raw = Math.min(w / 1280.0, h / 760.0);
+        return Math.max(0.8f, Math.min(1.9f, Math.round(raw * 20) / 20f));
+    }
+
     @Override
     protected void paintComponent(Graphics g0) {
         super.paintComponent(g0);
+        int w = getWidth();
+        int h = getHeight();
+        if (w <= 0 || h <= 0) {
+            return;
+        }
         Graphics2D g = (Graphics2D) g0.create();
         g.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_NEAREST_NEIGHBOR);
+        g.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
         long nowNanos = System.nanoTime();
         long nowMillis = System.currentTimeMillis();
         double tickF = tickF(nowNanos);
         mine.update(nowNanos);
         opponent.update(nowNanos);
 
-        int w = getWidth();
-        int h = getHeight();
-        int sideW = (w - DIVIDER) / 2;
-        int viewH = h - HUD_H - STATUS_H;
+        float u = hudScale(w, h);
+        hud.layout(w, h, u, myName, opponentName);
+        int divider = Math.max(4, Math.round(8 * u));
+        int sideW = (w - divider) / 2;
+        int rightW = w - sideW - divider;
+        int viewH = Math.max(40, h - hud.topH - hud.dashH);
+        int n = Math.min(TrackView.tileSizeFor(sideW, viewH), TrackView.tileSizeFor(rightW, viewH));
 
-        paintSide(g, mine, opponent, 0, sideW, viewH, "1P", myName, MY_COLOR, true, tickF, nowMillis);
-        paintSide(g, opponent, mine, sideW + DIVIDER, w - sideW - DIVIDER, viewH, "2P", opponentName, OPP_COLOR,
-                false, tickF, nowMillis);
+        g.setColor(NfsPalette.VOID);
+        g.fillRect(0, 0, w, h);
+        Graphics2D left = (Graphics2D) g.create(0, hud.topH, sideW, viewH);
+        mine.paint(left, 0, 0, sideW, viewH, obstacles, tickF, nowMillis, n);
+        left.dispose();
+        Graphics2D right = (Graphics2D) g.create(sideW + divider, hud.topH, rightW, viewH);
+        opponent.paint(right, 0, 0, rightW, viewH, obstacles, tickF, nowMillis, n);
+        right.dispose();
+        paintDivider(g, sideW, divider, viewH);
 
-        g.setColor(BG);
-        g.fillRect(sideW, 0, DIVIDER, h);
-        paintStatus(g, w, h);
-        if (countdownText != null) {
-            paintCountdown(g, w, HUD_H + viewH / 2);
-        }
+        hud.paintTop(g, mine.renderDist(), opponent.renderDist());
+        paintDash(g, mine, opponent, true, 0, sideW, viewH);
+        paintDash(g, opponent, mine, false, sideW + divider, rightW, viewH);
+        g.setColor(NfsPalette.VOID);
+        g.fillRect(sideW, hud.topH + viewH, divider, hud.dashH);
+
+        paintStatus(g, w, hud.topH + Math.round(14 * u), u);
+        countdown.paint(g, w, hud.topH + viewH / 2, u, nowNanos);
         g.dispose();
     }
 
-    private void paintSide(Graphics2D g, TrackView view, TrackView other, int x, int w, int viewH, String tag,
-                           String name, Color color, boolean mapOnLeft, double tickF, long nowMillis) {
-        Graphics2D clip = (Graphics2D) g.create(x, HUD_H, w, viewH);
-        view.paint(clip, 0, 0, w, viewH, obstacles, tickF, nowMillis);
-        clip.dispose();
-
-        int mapX = mapOnLeft ? x + 8 : x + w - 8 - MAP_W;
-        Color otherColor = color == MY_COLOR ? OPP_COLOR : MY_COLOR;
-        paintMinimap(g, mapX, HUD_H + 14, viewH - 28, view.renderDist(), color, other.renderDist(), otherColor);
-        paintHud(g, view, other, x, w, tag, name, color);
+    private void paintDivider(Graphics2D g, int x, int width, int viewH) {
+        g.setColor(NfsPalette.VOID);
+        g.fillRect(x, hud.topH, width, viewH);
+        g.setColor(NfsPalette.AMBER_DEEP);
+        g.fillRect(x + width / 2 - 1, hud.topH, 2, viewH);
+        g.setColor(NfsPalette.LINE);
+        g.fillRect(x, hud.topH, 1, viewH);
+        g.fillRect(x + width - 1, hud.topH, 1, viewH);
     }
 
-    private void paintHud(Graphics2D g, TrackView view, TrackView other, int x, int w, String tag, String name,
-                          Color color) {
+    private void paintDash(Graphics2D g, TrackView view, TrackView other, boolean isMine, int x, int width, int viewH) {
         CarModel car = view.car();
-        g.setColor(BG);
-        g.fillRect(x, 0, w, HUD_H);
-        int line1 = 4;
-        int line2 = 4 + PixelArt.textHeight(2) + 2;
-        int pad = 22;
-        PixelArt.drawText(g, tag, x + pad, line1, 2, color, -1);
-        PixelArt.drawText(g, name, x + pad + 42, line1, 2, HUD_TEXT, -1);
-        PixelArt.drawText(g, String.format(Locale.ROOT, "%03d KM/H", Math.round(car.speed())), x + pad, line2, 2,
-                HUD_TEXT, -1);
-
-        String dist = String.format(Locale.ROOT, "%04d/%04d M", Math.round(view.renderDist()),
-                Math.round(GameConfig.TRACK_LENGTH));
-        PixelArt.drawText(g, dist, x + w - pad, line1, 2, HUD_TEXT, 1);
+        Color accent = isMine ? RaceHud.ME : RaceHud.RIVAL;
         String rank;
         Color rankColor;
+        boolean status = false;
         if (car.finished()) {
-            rank = "FINISH!";
-            rankColor = HUD_ACCENT;
+            rank = RaceHud.STATUS_FINISH;
+            rankColor = accent;
+            status = true;
         } else if (car.stunned()) {
-            rank = "CRASH!";
-            rankColor = MY_COLOR;
-        } else if (view.renderDist() >= other.renderDist()) {
+            rank = RaceHud.STATUS_CRASH;
+            rankColor = NfsPalette.RED;
+            status = true;
+        } else if (isMine ? view.renderDist() >= other.renderDist() : view.renderDist() > other.renderDist()) {
             rank = "1ST";
-            rankColor = HUD_ACCENT;
+            rankColor = accent;
         } else {
             rank = "2ND";
-            rankColor = HUD_DIM;
+            rankColor = NfsPalette.MUTED;
         }
-        PixelArt.drawText(g, rank, x + w - pad, line2, 2, rankColor, 1);
+        hud.paintDash(g, x, hud.topH + viewH, width, isMine, car.speed(), view.renderDist(), rank, rankColor, status);
     }
 
-    private static void paintMinimap(Graphics2D g, int x, int y, int h, double self, Color selfColor,
-                                     double other, Color otherColor) {
-        g.setColor(MAP_BG);
-        g.fillRect(x - 2, y - 2, MAP_W + 4, h + 4);
-        g.setColor(MAP_ROAD);
-        g.fillRect(x + MAP_W / 2 - 2, y, 4, h);
-        for (int i = 0; i < 2; i++) {   // ô cờ đích ở đỉnh
-            g.setColor(i % 2 == 0 ? Color.WHITE : Color.BLACK);
-            g.fillRect(x + i * MAP_W / 2, y, MAP_W / 2, 4);
+    /** Dòng trạng thái (đang đếm ngược, đang chờ đối thủ...) dạng viên thuốc ở giữa, chỉ dựng lại khi đổi chữ. */
+    private void paintStatus(Graphics2D g, int w, int y, float u) {
+        if (statusText.isEmpty()) {
+            return;
         }
-        g.setColor(Color.WHITE);
-        g.fillRect(x, y + h - 2, MAP_W, 2);
-        dot(g, x, y, h, other, otherColor, 3);
-        dot(g, x, y, h, self, selfColor, 5);
+        if (statusChip == null || !statusText.equals(statusChipText) || statusChipScale != u) {
+            statusChip = buildStatusChip(statusText, u);
+            statusChipText = statusText;
+            statusChipScale = u;
+        }
+        g.drawImage(statusChip, (w - statusChip.getWidth()) / 2, y, null);
     }
 
-    private static void dot(Graphics2D g, int x, int y, int h, double meters, Color c, int r) {
-        double ratio = Math.max(0, Math.min(1, meters / GameConfig.TRACK_LENGTH));
-        int cy = y + h - (int) Math.round(ratio * h);
-        g.setColor(Color.BLACK);
-        g.fillRect(x + MAP_W / 2 - r - 1, cy - r - 1, 2 * r + 2, 2 * r + 2);
-        g.setColor(c);
-        g.fillRect(x + MAP_W / 2 - r, cy - r, 2 * r, 2 * r);
+    private static BufferedImage buildStatusChip(String text, float u) {
+        var font = NfsFonts.tracked(NfsFonts.display(16 * u), 0.06f);
+        BufferedImage probe = RaceGfx.image(4, 4);
+        Graphics2D pg = probe.createGraphics();
+        FontMetrics fm = pg.getFontMetrics(font);
+        pg.dispose();
+        String shown = NfsFonts.safe(text).toUpperCase(Locale.ROOT);
+        int pad = Math.round(16 * u), dot = Math.round(8 * u);
+        int cw = fm.stringWidth(shown) + 2 * pad + dot + Math.round(8 * u), ch = Math.round(32 * u);
+        BufferedImage img = RaceGfx.image(cw + 4, ch + 4);
+        Graphics2D g = RaceGfx.gfx(img, 1);
+        var shape = Chamfer.shape(2, 2, cw, ch, 9 * u, 0, 9 * u, 0);
+        g.setColor(RaceGfx.a(NfsPalette.VOID, 0.82));
+        g.fill(shape);
+        g.setColor(RaceGfx.a(NfsPalette.AMBER, 0.75));
+        g.setStroke(new BasicStroke(1.3f));
+        g.draw(shape);
+        g.setColor(STATUS_DOT);
+        g.fillOval(2 + pad, 2 + (ch - dot) / 2, dot, dot);
+        g.setFont(font);
+        g.setColor(NfsPalette.TEXT);
+        g.drawString(shown, 2 + pad + dot + Math.round(8 * u), 2 + (ch + fm.getAscent() - fm.getDescent()) / 2);
+        g.dispose();
+        return img;
     }
 
-    private void paintStatus(Graphics2D g, int w, int h) {
-        g.setColor(BG);
-        g.fillRect(0, h - STATUS_H, w, STATUS_H);
-        g.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
-        g.setFont(STATUS_FONT);
-        FontMetrics fm = g.getFontMetrics();
-        int baseline = h - STATUS_H + (STATUS_H + fm.getAscent()) / 2 - 2;
-        g.setColor(HUD_DIM);
-        g.drawString("W/↑ tăng tốc   S/↓ phanh   A/D, ←/→ đổi làn   Esc thoát", 12, baseline);
-        g.setColor(STATUS_TEXT);
-        g.drawString(statusText, w - 12 - fm.stringWidth(statusText), baseline);
-    }
-
-    private void paintCountdown(Graphics2D g, int w, int cy) {
-        String text = countdownText.toUpperCase(Locale.ROOT);
-        int scale = text.length() <= 1 ? 9 : 6;
-        int textW = PixelArt.text(text, Color.WHITE).getWidth() * scale;
-        int textH = PixelArt.textHeight(scale);
-        int boxW = Math.max(260, textW + 80);
-        int boxH = textH + 40;
-        int bx = (w - boxW) / 2;
-        int by = cy - boxH / 2;
-        g.setColor(BOX_FILL);
-        g.fillRect(bx, by, boxW, boxH);
-        Stroke old = g.getStroke();
-        g.setStroke(BOX_STROKE);
-        g.setColor(Color.WHITE);
-        g.drawRect(bx + 6, by + 6, boxW - 12, boxH - 12);
-        g.setStroke(old);
-        PixelArt.drawText(g, text, w / 2, by + 20, scale, Color.WHITE, 0);
-    }
-
-    /** Tên trên HUD: chữ hoa, bỏ dấu ngoài bảng ASCII của font pixel, tối đa 10 ký tự. */
+    /** Tên trên HUD: chữ hoa (giữ dấu tiếng Việt), tối đa {@value #MAX_NAME} ký tự. */
     private static String hudName(String s) {
         if (s == null || s.isBlank()) {
             return "?";
         }
-        String n = java.text.Normalizer.normalize(s, java.text.Normalizer.Form.NFD)
-                .replaceAll("\\p{M}", "").replace('đ', 'd').replace('Đ', 'D').toUpperCase(Locale.ROOT);
-        return n.length() > 10 ? n.substring(0, 10) : n;
+        String n = NfsFonts.safe(java.text.Normalizer.normalize(s.trim(), java.text.Normalizer.Form.NFC))
+                .toUpperCase(Locale.ROOT);
+        return n.length() > MAX_NAME ? n.substring(0, MAX_NAME) : n;
     }
 }

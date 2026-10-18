@@ -4,41 +4,55 @@ import racing.common.dto.EndReason;
 import racing.common.dto.MatchOutcome;
 import racing.common.dto.MatchResult;
 
-import javax.swing.JDialog;
-import javax.swing.JOptionPane;
-import java.awt.Window;
+import racing.client.ui.theme.Responsive;
 
-/** Hộp kết quả trận: thắng / thua / hòa, lý do và điểm mới của hai bên. Modal, đóng bằng OK. */
+import javax.swing.AbstractAction;
+import javax.swing.JComponent;
+import javax.swing.JDialog;
+import javax.swing.KeyStroke;
+import java.awt.Color;
+import java.awt.Dialog;
+import java.awt.Window;
+import java.awt.event.ActionEvent;
+import java.awt.event.KeyEvent;
+
+/** Thẻ kết quả trận kiểu NFS: VICTORY / DEFEAT / DRAW, lý do, thời gian, tốc độ trung bình và điểm. Modal, đóng bằng TIẾP TỤC / Enter / Esc. */
 public final class ResultDialog {
 
     private ResultDialog() {
     }
 
     public static void show(Window owner, MatchResult r, String me, String opponent) {
-        String title = switch (r.outcome()) {
-            case WIN -> "Bạn THẮNG!";
-            case LOSE -> "Bạn thua";
-            case DRAW -> "Hòa";
-            case ABORTED -> "Trận bị hủy";
-        };
-        String body = "<html><div style='width:320px;font-size:12pt'>"
-                + "<p><b>" + title + "</b></p>"
-                + "<p>Lý do: " + reasonText(r.reason(), r.outcome()) + "</p>"
-                + "<p>Điểm hiện tại: " + me + " <b>" + r.myPoints() + "</b> · "
-                + opponent + " <b>" + r.opponentPoints() + "</b></p>"
-                + (r.elapsedMillis() > 0
-                        ? "<p>Thời gian đua: " + String.format("%.1f", r.elapsedMillis() / 1000.0) + " s</p>" : "")
-                + "</div></html>";
-        int type = switch (r.outcome()) {
-            case WIN -> JOptionPane.INFORMATION_MESSAGE;
-            case LOSE -> JOptionPane.WARNING_MESSAGE;
-            default -> JOptionPane.PLAIN_MESSAGE;
-        };
-        JOptionPane pane = new JOptionPane(body, type, JOptionPane.DEFAULT_OPTION);
-        JDialog dlg = pane.createDialog(owner, "Kết quả trận đấu");
-        dlg.setModal(true);
+        JDialog dlg = create(owner, r, me, opponent);
         dlg.setVisible(true);
         dlg.dispose();
+    }
+
+    /** Dựng hộp thoại chưa hiển thị (dùng cho {@link #show} và để chụp ảnh kiểm tra giao diện). */
+    public static JDialog create(Window owner, MatchResult r, String me, String opponent) {
+        float scale = owner != null ? Responsive.scaleOf(owner) : 1f;
+        JDialog dlg = new JDialog(owner, "Kết quả trận đấu", Dialog.ModalityType.APPLICATION_MODAL);
+        dlg.setUndecorated(true);
+        try {
+            dlg.setBackground(new Color(0, 0, 0, 0));   // góc vát trong suốt khi nền tảng cho phép
+        } catch (UnsupportedOperationException ignored) {
+            // nền đen phía sau góc vát: chấp nhận được
+        }
+        RaceResultCard card = new RaceResultCard(r, me, opponent, scale, dlg::dispose);
+        dlg.setContentPane(card);
+        Responsive.pin(dlg.getRootPane(), scale);
+        dlg.getRootPane().setDefaultButton(card.closeButton());
+        dlg.getRootPane().getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW)
+                .put(KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0), "close");
+        dlg.getRootPane().getActionMap().put("close", new AbstractAction() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                dlg.dispose();
+            }
+        });
+        dlg.pack();
+        dlg.setLocationRelativeTo(owner);
+        return dlg;
     }
 
     static String reasonText(EndReason reason, MatchOutcome outcome) {

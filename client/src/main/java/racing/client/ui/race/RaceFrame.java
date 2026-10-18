@@ -2,6 +2,10 @@ package racing.client.ui.race;
 
 import racing.client.model.CarModel;
 import racing.client.ui.GameTheme;
+import racing.client.ui.theme.Fullscreen;
+import racing.client.ui.theme.NfsPalette;
+import racing.client.ui.theme.Responsive;
+import racing.client.ui.theme.ScreenFrame;
 import racing.common.GameConfig;
 import racing.common.dto.MatchResult;
 import racing.common.dto.MatchStart;
@@ -11,8 +15,6 @@ import racing.common.net.Message;
 import racing.common.net.MessageType;
 
 import javax.swing.AbstractAction;
-import javax.swing.BorderFactory;
-import javax.swing.JButton;
 import javax.swing.JComponent;
 import javax.swing.JFrame;
 import javax.swing.JOptionPane;
@@ -21,7 +23,7 @@ import javax.swing.KeyStroke;
 import javax.swing.SwingUtilities;
 import javax.swing.Timer;
 import java.awt.BorderLayout;
-import java.awt.FlowLayout;
+import java.awt.Dimension;
 import java.awt.event.ActionEvent;
 import java.awt.event.KeyEvent;
 import java.awt.event.WindowAdapter;
@@ -80,21 +82,18 @@ public final class RaceFrame extends JFrame {
             }
         });
 
-        JPanel bottom = new JPanel(new FlowLayout(FlowLayout.RIGHT));
-        bottom.setBackground(GameTheme.BG);
-        bottom.setBorder(BorderFactory.createEmptyBorder(4, 0, 8, 0));
-        JButton quit = GameTheme.button("Thoát trận (Esc)",false);
-        quit.setFocusable(false);
-        quit.addActionListener(e -> confirmQuit());
-        bottom.add(quit);
-
-        setLayout(new BorderLayout());
-        add(panel, BorderLayout.CENTER);
-        add(bottom, BorderLayout.SOUTH);
+        JPanel content = new JPanel(new BorderLayout());
+        content.setBackground(NfsPalette.VOID);
+        content.add(panel, BorderLayout.CENTER);
+        content.add(new RaceHintBar(this::confirmQuit), BorderLayout.SOUTH);
+        setContentPane(content);
         bindKeys();
-        pack();
+        setMinimumSize(new Dimension(1024, 640));
+        ScreenFrame.fit(this, 1280, 830);
         setLocationRelativeTo(null);
         GameTheme.decorate(this);
+        Responsive.attach(this, getRootPane());
+        Fullscreen.bind(this);
         addWindowFocusListener(new WindowAdapter() {
             public void windowLostFocus(WindowEvent e) { myCar.setThrottle(false); myCar.setBrake(false); }
         });
