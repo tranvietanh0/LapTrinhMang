@@ -33,6 +33,7 @@ public final class LeaderboardFrame extends JFrame {
         GameTheme.table(table);
         Responsive.rowHeight(table, 52);
         table.setEnabled(false);
+        TableMotion rowMotion = TableMotion.attach(table);
         IntFunction<Color> medalStripe = row -> row < 3 ? MenuPaint.medal(row + 1)[0] : null;
         TableColumnModel columns = table.getColumnModel();
         columns.getColumn(0).setCellRenderer(MenuCells.rank(medalStripe));
@@ -64,10 +65,12 @@ public final class LeaderboardFrame extends JFrame {
         card.add(scroll, BorderLayout.CENTER);
         card.add(footer, BorderLayout.SOUTH);
 
-        JPanel shell = new MenuPanel(new MenuStackLayout(14), 22, 32);
+        MenuPanel shell = new MenuPanel(new MenuStackLayout(14), 22, 32);
         shell.add(heading);
         shell.add(podium);
         shell.add(card);
+        RevealPanel.style(heading, RevealPanel.Style.SLIDE);
+        shell.reveal(0, 90);
         NfsBackdrop root = new NfsBackdrop();
         root.setLayout(new BorderLayout());
         root.add(shell, BorderLayout.CENTER);
@@ -80,6 +83,7 @@ public final class LeaderboardFrame extends JFrame {
             List<RankRow> rows = m.getPayload();
             model.setRows(rows);
             podium.setRows(rows);
+            rowMotion.revealFirstLoad();
             statusLabel.setText(model.getRowCount() + " người chơi");
         });
         addWindowListener(new WindowAdapter() {

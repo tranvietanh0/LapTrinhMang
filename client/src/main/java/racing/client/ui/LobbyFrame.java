@@ -33,6 +33,7 @@ public final class LobbyFrame extends JFrame {
     private final ClientState state;
     private final OnlineTableModel model = new OnlineTableModel();
     private final JTable table = new JTable(model);
+    private final TableMotion rowMotion = TableMotion.attach(table);
     private final JLabel meLabel = new JLabel();
     private final MenuStatStrip stats = new MenuStatStrip();
     private final MenuShowcase showcase = new MenuShowcase("GARAGE / XE CỦA BẠN", "STREET 01",
@@ -87,7 +88,7 @@ public final class LobbyFrame extends JFrame {
         profile.add(meLabel); GameTheme.gap(profile,14);
         profile.add(stats);
         JPanel profileCard=GameTheme.card(new BorderLayout(),22); profileCard.add(profile,BorderLayout.CENTER);
-        JPanel left=new MenuPanel(new MenuStackLayout(16),0,0);
+        MenuPanel left=new MenuPanel(new MenuStackLayout(16),0,0);
         left.add(profileCard); left.add(showcase);
 
         // right: roster + challenge action
@@ -127,10 +128,15 @@ public final class LobbyFrame extends JFrame {
         JPanel rosterCard=GameTheme.card(new BorderLayout(0,16),22);
         rosterCard.add(rosterHeader,BorderLayout.NORTH); rosterCard.add(scroll,BorderLayout.CENTER); rosterCard.add(south,BorderLayout.SOUTH);
 
-        JPanel body=new MenuPanel(new MenuColumnsLayout(left,rosterCard,0.34f,330,20),0,0);
+        MenuPanel body=new MenuPanel(new MenuColumnsLayout(left,rosterCard,0.34f,330,20),0,0);
         body.add(left); body.add(rosterCard);
-        JPanel shell=new MenuPanel(new MenuStackLayout(18),22,32);
+        MenuPanel shell=new MenuPanel(new MenuStackLayout(18),22,32);
         shell.add(header); shell.add(body);
+        // entrance: header slides in, then driver card, garage and roster rise one after another
+        RevealPanel.style(header,RevealPanel.Style.SLIDE);
+        shell.reveal(0,0,header);
+        left.reveal(90,80,profileCard,showcase);
+        body.reveal(130,0,rosterCard);
         NfsBackdrop root=new NfsBackdrop();
         root.setLayout(new BorderLayout()); root.add(shell,BorderLayout.CENTER);
         GameTheme.decorate(this);
@@ -172,6 +178,7 @@ public final class LobbyFrame extends JFrame {
         String selected = selectedUsername();
         state.setOnline(list);
         model.setRows(state.online(), state.me() == null ? null : state.me().username());
+        rowMotion.revealFirstLoad();
         int others=(int)state.online().stream().filter(p->state.me()==null || !p.username().equals(state.me().username())).count();
         onlineLabel.setText(others==0 ? "Chưa có đối thủ online. Mời bạn bè kết nối vào cùng server." : others+" đối thủ online • Chọn một người chơi để thách đấu.");
         if (selected != null) {

@@ -23,8 +23,10 @@ public final class LoginFrame extends JFrame {
     private final JTextField userField = new JTextField(18);
     private final JPasswordField passField = new JPasswordField(18);
     private final JLabel errorLabel = new JLabel();
-    private final JButton loginButton = GameTheme.button("VÀO SẢNH  →", true);
+    private final ChamferButton loginButton = new ChamferButton("VÀO SẢNH  →", true);
     private final JButton registerButton = GameTheme.button("Tạo tài khoản", false);
+    private final RevealPanel stage = new RevealPanel(null);
+    private final JPanel card;
     private Runnable offLoginResult;
 
     public LoginFrame(ClientApp app, String defaultHost, int defaultPort) {
@@ -32,9 +34,9 @@ public final class LoginFrame extends JFrame {
         this.app=app;
         serverField=new JTextField(defaultHost+":"+defaultPort,18);
         setDefaultCloseOperation(EXIT_ON_CLOSE);
-        JPanel form=GameTheme.column();
+        RevealPanel form=RevealPanel.column();
         form.add(GameTheme.eyebrow("PIT ENTRY / ĐĂNG NHẬP")); GameTheme.gap(form,6);
-        form.add(GameTheme.heading("SẴN SÀNG XUẤT PHÁT?")); GameTheme.gap(form,4);
+        form.add(RevealPanel.style(GameTheme.heading("SẴN SÀNG XUẤT PHÁT?"),RevealPanel.Style.LAND)); GameTheme.gap(form,4);
         form.add(GameTheme.label("Vào sảnh và tìm đối thủ của bạn.",GameTheme.BODY,GameTheme.MUTED));
         GameTheme.gap(form,22);
         GameTheme.formField(form,"SERVER / HOST:PORT",serverField);
@@ -46,17 +48,23 @@ public final class LoginFrame extends JFrame {
         GameTheme.fullWidth(loginButton,GameTheme.CONTROL_H); form.add(loginButton); GameTheme.gap(form,8);
         GameTheme.fullWidth(registerButton,GameTheme.CONTROL_H); form.add(registerButton); GameTheme.gap(form,14);
         form.add(GameTheme.label("W  Tăng tốc     A / D  Đổi làn     F11  Toàn màn hình",GameTheme.SMALL,GameTheme.MUTED));
-        JPanel card=GameTheme.card(new BorderLayout(),26); card.add(form,BorderLayout.CENTER);
+        card=GameTheme.card(new BorderLayout(),26); card.add(form,BorderLayout.CENTER);
         HeroPanel hero=new HeroPanel("STREET RACING NETWORK","ĐƯỜNG ĐUA","CỦA BẠN.","Chọn đối thủ. Giữ tay lái. Vượt lên phía trước.",
                 new String[][]{{"1 VS 1","ĐẤU TRỰC TIẾP"},{"2.500 M","ĐƯỜNG ĐUA"},{"3 LÀN","NÉ XE CỘ"}});
+        RevealPanel.style(hero,RevealPanel.Style.SLIDE);
+        stage.add(hero); stage.add(card);
+        stage.setLayout(new HeroCardLayout(hero,card,440,1000,28));
         NfsBackdrop root=new NfsBackdrop();
-        root.add(hero); root.add(card);
-        root.setLayout(new HeroCardLayout(hero,card,440,1000,28));
+        root.setLayout(new BorderLayout()); root.add(stage,BorderLayout.CENTER);
         GameTheme.decorate(this);
         ScreenFrame.fit(this,1280,800); ScreenFrame.install(this,root,new Dimension(900,600)); setLocationRelativeTo(null);
         getRootPane().setDefaultButton(loginButton);
         loginButton.addActionListener(e->login()); registerButton.addActionListener(e->register());
         addWindowListener(new WindowAdapter() { public void windowClosed(WindowEvent e) { unregister(); } });
+        // entrance: hero slides in, card rises, then the form lines follow one by one; idle light sweep on the CTA
+        stage.reveal(0,90,hero,card);
+        form.reveal(200,RevealPanel.STAGGER);
+        loginButton.setSheen(true);
     }
     public void setUsername(String username) { userField.setText(username); passField.requestFocusInWindow(); }
     private void login() {
@@ -110,9 +118,10 @@ public final class LoginFrame extends JFrame {
         loginButton.setEnabled(!busy); registerButton.setEnabled(!busy);
         serverField.setEnabled(!busy); userField.setEnabled(!busy); passField.setEnabled(!busy);
         loginButton.setText(busy?"ĐANG KẾT NỐI…":"VÀO SẢNH  →");
+        loginButton.setBusy(busy);
         if(busy) showInfo("Đang kết nối…");
     }
-    private void showError(String text) { GameTheme.status(errorLabel,text,GameTheme.ERROR); }
+    private void showError(String text) { GameTheme.status(errorLabel,text,GameTheme.ERROR); stage.shake(card); }
     private void showInfo(String text) { GameTheme.status(errorLabel,text,GameTheme.SUCCESS); }
     private void unregister() { if(offLoginResult!=null) { offLoginResult.run(); offLoginResult=null; } }
 }
