@@ -37,6 +37,8 @@ Tài khoản mẫu: `alice`, `bob`, `carol`, `dave`, `erin`, `frank`, mật kh�
 
 ## Build và chạy
 
+Bản setup Windows trên máy hiện tại: [cách chạy/tắt và vị trí dữ liệu](docs/WINDOWS-LOCAL-SETUP.md).
+
 ```
 ./mvnw package                       # Windows: mvnw.cmd package
 java -jar server/target/racing-server.jar            # cổng 5000, dùng MySQL theo db.properties

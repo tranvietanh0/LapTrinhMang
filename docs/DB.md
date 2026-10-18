@@ -54,6 +54,8 @@ Quy tắc cộng điểm (thực hiện trong một transaction ở `MatchDAO.sa
 
 Payload theo loại: `START` `{"lane":1}` · `COLLISION` `{"lane","distance","obstacle"}` (`obstacle` = vị trí xe cộ lúc va chạm, vì xe cộ chạy cùng chiều) · `FINISH` `{"distance","elapsedMillis"}` · `QUIT`/`DISCONNECT` `{"distance"}` · `REMATCH` NULL.
 
+Server xếp các sự kiện vào một luồng ghi riêng theo thứ tự gửi để thao tác JDBC không chặn tick đua. Bảng `match_events` có thể cập nhật chậm hơn trạng thái trận một khoảng ngắn; `event_time` là thời điểm ghi vào MySQL. Tạo trận và chốt kết quả vẫn được thực hiện trực tiếp, kết quả/điểm giữ transaction hiện có. Khi dừng server bình thường, server chờ tối đa 10 giây để hoàn tất hàng đợi ghi; lỗi ghi hoặc hàng đợi chưa hoàn tất được báo trong log.
+
 ## Truy vấn hay dùng
 
 1. Bảng xếp hạng (đúng thứ tự client hiển thị):
