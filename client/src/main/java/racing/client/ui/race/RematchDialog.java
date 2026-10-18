@@ -57,9 +57,10 @@ public final class RematchDialog {
 
         JPanel card = GameTheme.card(new BorderLayout(), 26);
         card.add(form, BorderLayout.CENTER);
+        RematchCard animated = new RematchCard(card, yes);   // pops in, then the primary button glows gently
         NfsBackdrop root = new NfsBackdrop();
-        root.add(card);
-        root.setLayout(new HeroCardLayout(null, card, 460, 0, 24));
+        root.add(animated);
+        root.setLayout(new HeroCardLayout(null, animated, 460, 0, 24));
         GameTheme.decorate(dlg);
         ScreenFrame.fit(dlg, Math.round(620 * scale), Math.round(520 * scale));
         ScreenFrame.install(dlg, root, owner);

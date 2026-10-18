@@ -1,6 +1,7 @@
 package racing.client.ui.race;
 
 import racing.client.ui.theme.NfsPalette;
+import racing.common.GameConfig;
 
 import java.awt.Color;
 import java.awt.Graphics2D;
@@ -17,6 +18,9 @@ import java.util.Random;
  */
 final class RaceFx {
     private static final int STREAKS = 34;
+    /** Edge rush starts at this speed (km/h) and is full at MAX_SPEED. */
+    private static final double RUSH_FROM = 200;
+    private static final int RUSH = 16;
     private static final float[] XF = new float[STREAKS], PHASE = new float[STREAKS], PAR = new float[STREAKS],
             LEN = new float[STREAKS], GAIN = new float[STREAKS];
     private static final int[] ZONE = new int[STREAKS];
@@ -60,6 +64,31 @@ final class RaceFx {
             }
             g.setComposite(RaceGfx.alpha(a));
             g.drawImage(img, sx, y + (int) yy, img.getWidth(), len, null);
+        }
+        g.setComposite(RaceGfx.ALPHA[16]);
+    }
+
+    /**
+     * Bright, fast streaks hugging both road edges (kerbs) above {@value #RUSH_FROM} km/h; count,
+     * length and brightness scale with how far past that speed the car is.
+     */
+    void drawRush(Graphics2D g, RaceSprites sp, int y, int h, int roadX, double camPx, double kmh) {
+        double p = (kmh - RUSH_FROM) / (GameConfig.MAX_SPEED - RUSH_FROM);
+        if (p <= 0) {
+            return;
+        }
+        p = Math.min(1, p);
+        BufferedImage img = sp.streak();
+        int sw = img.getWidth() * 2, band = sp.kerbW + sp.px(14);
+        int count = (int) Math.round(RUSH * (0.4 + 0.6 * p));
+        for (int i = 0; i < count; i++) {
+            int len = sp.px(70 + 170 * p * LEN[i]);
+            double span = h + len;
+            double yy = (PHASE[i] * span + camPx * (2.4 + PAR[i] * 0.5)) % span - len;
+            int off = (int) (XF[i] * band);
+            int sx = i % 2 == 0 ? roadX - sp.kerbW - sp.px(4) + off - band / 2 : roadX + sp.roadW + sp.kerbW + sp.px(4) - off + band / 2 - sw;
+            g.setComposite(RaceGfx.alpha(p * (0.45 + 0.5 * GAIN[i])));
+            g.drawImage(img, sx, y + (int) yy, sw, len, null);
         }
         g.setComposite(RaceGfx.ALPHA[16]);
     }

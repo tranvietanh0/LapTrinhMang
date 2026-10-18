@@ -248,7 +248,7 @@ final class RaceHud {
 
     /** One dashboard under a road. {@code mine} picks the amber (own) or blue (rival) styling. */
     void paintDash(Graphics2D g, int x, int y, int width, boolean mine, double speedKmh, double meters,
-                   String rankText, Color rankColor, boolean statusRank) {
+                   String rankText, Color rankColor, boolean statusRank, float rankScale) {
         int side = mine ? 0 : 1;
         if (dash[side] == null || dashW[side] != width) {
             dash[side] = buildDash(width, mine);
@@ -274,11 +274,23 @@ final class RaceHud {
         g.setColor(NfsPalette.MUTED);
         g.drawString("VỊ TRÍ", col1, y + Math.round(36 * u));
         Txt rt = statusRank ? rankSmall : rank;
+        int ry = y + dashH - Math.round(24 * u);
+        double ax = col1 + rt.width(rankText) / 2.0, ay = ry - rt.fm().getAscent() * 0.35;
+        if (rankScale != 1f) {   // pop around the text centre, undone below without allocating a transform
+            g.translate(ax, ay);
+            g.scale(rankScale, rankScale);
+            g.translate(-ax, -ay);
+        }
         g.setFont(rt.font());
         g.setColor(RaceGfx.a(Color.BLACK, 0.6));
-        g.drawString(rankText, col1 + 2, y + dashH - Math.round(24 * u) + 2);
+        g.drawString(rankText, col1 + 2, ry + 2);
         g.setColor(rankColor);
-        g.drawString(rankText, col1, y + dashH - Math.round(24 * u));
+        g.drawString(rankText, col1, ry);
+        if (rankScale != 1f) {
+            g.translate(ax, ay);
+            g.scale(1 / rankScale, 1 / rankScale);
+            g.translate(-ax, -ay);
+        }
 
         paintProgress(g, x, y, side, meters);
         String d = distText((int) Math.round(meters));
