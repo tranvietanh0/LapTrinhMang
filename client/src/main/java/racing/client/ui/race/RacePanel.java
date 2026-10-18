@@ -5,7 +5,6 @@ import racing.common.GameConfig;
 import racing.common.dto.Obstacle;
 
 import javax.swing.JPanel;
-import javax.swing.Timer;
 import java.awt.BasicStroke;
 import java.awt.Color;
 import java.awt.Dimension;
@@ -17,6 +16,9 @@ import java.awt.RenderingHints;
 import java.awt.Stroke;
 import java.util.List;
 import java.util.Locale;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Màn hình đua kiểu game đua xe 8-bit cổ điển, chia đôi: trái là đường của mình, phải là đường
@@ -48,15 +50,14 @@ public final class RacePanel extends JPanel {
 
     private final TrackView mine;
     private final TrackView opponent;
-    private final Timer frameTimer = new Timer(FRAME_MS, e -> repaint());
+    private ScheduledExecutorService frameClock;
     private List<Obstacle> obstacles = List.of();
 
     private String myName = "YOU";
     private String opponentName = "RIVAL";
     private String countdownText = null;   // "3", "2", "1", "GO!" hoặc null
     private String statusText = "";
-    private long raceTick;
-    private long raceTickStampNanos;       // 0 = chưa nhận tick nào trong ván
+    private final RaceClock raceClock = new RaceClock();
 
     public RacePanel(CarModel myCar, CarModel opponentCar) {
         this.mine = new TrackView(myCar, PixelArt.PLAYER, 17);
@@ -70,20 +71,26 @@ public final class RacePanel extends JPanel {
     @Override
     public void addNotify() {
         super.addNotify();
-        frameTimer.start();
+        if(frameClock==null) {
+            frameClock=Executors.newSingleThreadScheduledExecutor(r->{
+                Thread thread=new Thread(r,"race-render-clock");thread.setDaemon(true);return thread;
+            });
+            // Fixed deadlines avoid the ~31 ms cadence of a repeating 16 ms Swing Timer on Windows.
+            // repaint is thread-safe and RepaintManager coalesces requests if the EDT is busy.
+            frameClock.scheduleAtFixedRate(this::repaint,0,FRAME_MS,TimeUnit.MILLISECONDS);
+        }
     }
 
     @Override
     public void removeNotify() {
-        frameTimer.stop();
+        if(frameClock!=null) { frameClock.shutdownNow();frameClock=null; }
         super.removeNotify();
     }
 
     /** Ván mới: danh sách xe cộ (giống nhau hai bên), xoá xe cộ đã tông và vụ nổ, tick về 0. */
     public void setObstacles(List<Obstacle> obstacles) {
         this.obstacles = obstacles == null ? List.of() : List.copyOf(obstacles);
-        raceTick = 0;
-        raceTickStampNanos = 0;
+        raceClock.reset();
         mine.resetRound();
         opponent.resetRound();
         repaint();
@@ -97,8 +104,7 @@ public final class RacePanel extends JPanel {
 
     /** Tick server mới nhất (RaceState.tick): vị trí xe cộ = obstacle.positionAt(tick). */
     public void setRaceTick(long tick) {
-        raceTick = tick;
-        raceTickStampNanos = System.nanoTime();
+        raceClock.accept(tick,System.nanoTime());
     }
 
     public void setCountdownText(String text) {
@@ -120,11 +126,7 @@ public final class RacePanel extends JPanel {
 
     /** Tick có phần lẻ: tick server + thời gian cục bộ từ lúc nhận, tối đa 3 tick để không chạy quá xa. */
     private double tickF(long nowNanos) {
-        if (raceTickStampNanos == 0) {
-            return raceTick;
-        }
-        double ahead = (nowNanos - raceTickStampNanos) / (GameConfig.TICK_MS * 1e6);
-        return raceTick + Math.max(0, Math.min(3, ahead));
+        return raceClock.sample(nowNanos);
     }
 
     @Override

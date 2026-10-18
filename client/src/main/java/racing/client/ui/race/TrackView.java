@@ -75,6 +75,8 @@ final class TrackView {
         explosions.clear();
         renderDist = car.distance();
         lastTarget = -1;
+        targetStampNanos = 0;
+        lastFrameNanos = 0;
         laneX = car.lane();
     }
 
@@ -121,10 +123,9 @@ final class TrackView {
         double extra = car.stunned() || car.finished() ? 0
                 : car.speed() * GameConfig.KMH_TO_MS * Math.min(0.12, (nowNanos - targetStampNanos) / 1e9);
         double desired = Math.min(GameConfig.TRACK_LENGTH, target + extra);
-        // không lùi vì sai số nhỏ khi server hiệu chỉnh; lệch lớn (ván mới) thì nhảy luôn
-        if (desired >= renderDist || renderDist - desired > 3) {
-            renderDist = desired;
-        }
+        // Render the camera continuously rather than stepping to every arriving 20 Hz snapshot.
+        // Only resetRound may move the camera backwards.
+        if (desired > renderDist) renderDist += (desired-renderDist)*(1-Math.exp(-dt*24));
         laneX += (car.lane() - laneX) * Math.min(1, dt * 14);
         if (Math.abs(car.lane() - laneX) < 0.01) {
             laneX = car.lane();

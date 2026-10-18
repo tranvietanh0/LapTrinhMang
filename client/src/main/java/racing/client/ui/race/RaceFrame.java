@@ -1,6 +1,7 @@
 package racing.client.ui.race;
 
 import racing.client.model.CarModel;
+import racing.client.ui.GameTheme;
 import racing.common.GameConfig;
 import racing.common.dto.MatchResult;
 import racing.common.dto.MatchStart;
@@ -55,6 +56,8 @@ public final class RaceFrame extends JFrame {
     private boolean rematchPending;
     private boolean resultShowing;
     private long raceStartMillis;
+    private long lastSimulationNanos;
+    private long lastStateNanos;
 
     public RaceFrame(MatchStart start, Consumer<Message> sender, Runnable onClosed) {
         super("Đua xe – " + start.me().username() + " vs " + start.opponent().username());
@@ -63,7 +66,7 @@ public final class RaceFrame extends JFrame {
         this.myCar = new CarModel(start.me().username(), 1);
         this.opponentCar = new CarModel(start.opponent().username(), 1);
         this.panel = new RacePanel(myCar, opponentCar);
-        this.tick = new Timer(GameConfig.TICK_MS, e -> onTick());
+        this.tick = new Timer(8, e -> onTick());
 
         setDefaultCloseOperation(DO_NOTHING_ON_CLOSE);
         addWindowListener(new WindowAdapter() {
@@ -71,11 +74,16 @@ public final class RaceFrame extends JFrame {
             public void windowClosing(WindowEvent e) {
                 confirmQuit();
             }
+            @Override
+            public void windowClosed(WindowEvent e) {
+                tick.stop();
+            }
         });
 
-        JPanel bottom = new JPanel(new FlowLayout(FlowLayout.CENTER));
+        JPanel bottom = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        bottom.setBackground(GameTheme.BG);
         bottom.setBorder(BorderFactory.createEmptyBorder(4, 0, 8, 0));
-        JButton quit = new JButton("Thoát trận (Esc)");
+        JButton quit = GameTheme.button("Thoát trận (Esc)",false);
         quit.setFocusable(false);
         quit.addActionListener(e -> confirmQuit());
         bottom.add(quit);
@@ -86,6 +94,10 @@ public final class RaceFrame extends JFrame {
         bindKeys();
         pack();
         setLocationRelativeTo(null);
+        GameTheme.decorate(this);
+        addWindowFocusListener(new WindowAdapter() {
+            public void windowLostFocus(WindowEvent e) { myCar.setThrottle(false); myCar.setBrake(false); }
+        });
 
         startRound(start);
     }
@@ -134,6 +146,8 @@ public final class RaceFrame extends JFrame {
         } else {
             phase = Phase.RACING;
             raceStartMillis = System.currentTimeMillis();
+            lastSimulationNanos=System.nanoTime();
+            lastStateNanos=lastSimulationNanos;
             panel.setStatusText("Đang đua");
             panel.setCountdownText("GO!");
             new Timer(600, e -> panel.setCountdownText(null)) {{ setRepeats(false); }}.start();
@@ -145,13 +159,18 @@ public final class RaceFrame extends JFrame {
         if (phase != Phase.RACING) {
             return;
         }
-        myCar.advance(GameConfig.TICK_MS / 1000.0);
-        sender.accept(new Message(MessageType.CAR_STATE, myCar.toState()));
+        long now=System.nanoTime();
+        double elapsed=Math.max(0,Math.min(0.1,(now-lastSimulationNanos)/1e9));
+        lastSimulationNanos=now;
+        myCar.advance(elapsed);
+        if(now-lastStateNanos>=GameConfig.TICK_MS*1_000_000L) {
+            sender.accept(new Message(MessageType.CAR_STATE, myCar.toState()));
+            lastStateNanos=now-(now-lastStateNanos)%(GameConfig.TICK_MS*1_000_000L);
+        }
         if (myCar.finished() && !finishSent) {
             finishSent = true;
             sender.accept(new Message(MessageType.FINISH, System.currentTimeMillis()));
         }
-        panel.repaint();
     }
 
     private void onRaceUpdate(RaceState s) {

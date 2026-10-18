@@ -2,14 +2,29 @@ package racing.client.ui.race;
 
 import org.junit.jupiter.api.Test;
 import racing.common.dto.Obstacle;
+import racing.common.dto.CarSnapshot;
+import racing.client.model.CarModel;
 
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TrackViewTest {
+
+    @Test
+    void cameraAbsorbsSnapshotStepsInsteadOfSnappingEveryTick() {
+        CarModel car=new CarModel("alice",1);
+        car.applyServer(new CarSnapshot("alice",100,1,300,false,false));
+        TrackView view=new TrackView(car,PixelArt.PLAYER,17);
+        view.resetRound();
+        view.update(1_000_000_000L);
+        car.applyServer(new CarSnapshot("alice",106,1,300,false,false));
+        view.update(1_016_000_000L);
+        assertTrue(view.renderDist()>100 && view.renderDist()<106,"camera must smooth the 20 Hz position step");
+    }
 
     @Test
     void trafficPositionMatchesServerFormulaAtWholeTicks() {
