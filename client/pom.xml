@@ -21,6 +21,10 @@
       <groupId>racing</groupId>
       <artifactId>common</artifactId>
     </dependency>
+    <dependency>
+      <groupId>com.formdev</groupId>
+      <artifactId>flatlaf</artifactId>
+    </dependency>
   </dependencies>
 
   <build>

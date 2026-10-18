@@ -6,7 +6,9 @@ import racing.common.dto.LoginResult;
 import racing.common.net.Message;
 import racing.common.net.MessageType;
 
-import javax.swing.BorderFactory;
+import racing.client.ui.theme.*;
+import java.awt.BorderLayout;
+import java.awt.Dimension;
 import javax.swing.JButton;
 import javax.swing.JDialog;
 import javax.swing.JFrame;
@@ -40,24 +42,28 @@ public final class RegisterDialog extends JDialog {
         userField.setText(prefillUsername == null ? "" : prefillUsername);
 
         JPanel form = GameTheme.column();
-        form.setOpaque(true); form.setBackground(GameTheme.BG);
-        form.setBorder(BorderFactory.createEmptyBorder(32,40,32,40));
-        form.add(GameTheme.eyebrow("NEW DRIVER / ĐĂNG KÝ")); GameTheme.gap(form,16);
-        form.add(GameTheme.label("Tên bạn trên đường đua.",GameTheme.TITLE.deriveFont(28f),GameTheme.TEXT)); GameTheme.gap(form,8);
+        form.add(GameTheme.eyebrow("NEW DRIVER / ĐĂNG KÝ")); GameTheme.gap(form,6);
+        form.add(GameTheme.heading("TÊN BẠN TRÊN ĐƯỜNG ĐUA")); GameTheme.gap(form,4);
         form.add(GameTheme.label("Tạo tài khoản để lưu điểm và lịch sử trận.",GameTheme.BODY,GameTheme.MUTED));
-        GameTheme.gap(form,24);
+        GameTheme.gap(form,18);
         GameTheme.formField(form,"TÀI KHOẢN",userField);
         form.add(GameTheme.label("3–50 ký tự: chữ không dấu, số hoặc _",GameTheme.SMALL,GameTheme.MUTED));
-        GameTheme.gap(form,16);
+        GameTheme.gap(form,14);
         GameTheme.formField(form,"MẬT KHẨU / ÍT NHẤT 4 KÝ TỰ",passField);
         GameTheme.formField(form,"NHẬP LẠI MẬT KHẨU",confirmField);
-        GameTheme.fullWidth(errorLabel,48); GameTheme.status(errorLabel,"",GameTheme.ERROR); form.add(errorLabel);
-        GameTheme.fullWidth(okButton,GameTheme.CONTROL_H); form.add(okButton); GameTheme.gap(form,12);
+        GameTheme.fullWidth(errorLabel,36); GameTheme.status(errorLabel,"",GameTheme.ERROR); form.add(errorLabel);
+        GameTheme.fullWidth(okButton,GameTheme.CONTROL_H); form.add(okButton); GameTheme.gap(form,8);
         JButton cancel = GameTheme.button("Quay lại đăng nhập",false);
         GameTheme.fullWidth(cancel,GameTheme.CONTROL_H); form.add(cancel);
 
-        setContentPane(form);
+        JPanel card = GameTheme.card(new BorderLayout(),26); card.add(form,BorderLayout.CENTER);
+        NfsBackdrop root = new NfsBackdrop();
+        root.add(card);
+        root.setLayout(new HeroCardLayout(null,card,460,0,24));
         GameTheme.decorate(this);
+        ScreenFrame.fit(this,Math.round(620*Responsive.scaleOf(owner)),Math.round(880*Responsive.scaleOf(owner)));
+        ScreenFrame.install(this,root,owner);
+        setMinimumSize(new Dimension(420,420));
         getRootPane().setDefaultButton(okButton);
         okButton.addActionListener(e -> submit());
         cancel.addActionListener(e -> dispose());
@@ -67,8 +73,8 @@ public final class RegisterDialog extends JDialog {
                 unregister();
             }
         });
-        pack();
-        setResizable(false);
+        validate();
+        setSize(getWidth(),Math.min(getHeight(),card.getPreferredSize().height+Math.round(48*Responsive.scaleOf(this))));
         setLocationRelativeTo(owner);
     }
 
