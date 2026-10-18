@@ -1,23 +1,15 @@
 package racing.client.ui;
 
 import racing.client.net.NetworkClient;
+import racing.client.ui.theme.*;
 import racing.common.GameConfig;
 import racing.common.dto.InviteInfo;
 import racing.common.dto.InviteReply;
 import racing.common.net.Message;
 import racing.common.net.MessageType;
 
-import javax.swing.BorderFactory;
-import javax.swing.JButton;
-import javax.swing.JDialog;
-import javax.swing.JFrame;
-import javax.swing.JLabel;
-import javax.swing.JPanel;
-import javax.swing.JProgressBar;
-import javax.swing.SwingConstants;
-import javax.swing.Timer;
-import java.awt.BorderLayout;
-import java.awt.Font;
+import javax.swing.*;
+import java.awt.*;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 
@@ -28,10 +20,12 @@ import java.awt.event.WindowEvent;
  */
 public final class InviteDialog extends JDialog {
 
+    private static final int URGENT_SECONDS = 5;
+
     private final NetworkClient net;
     private final InviteInfo invite;
-    private final JLabel countLabel = new JLabel("", SwingConstants.CENTER);
-    private final JProgressBar bar = new JProgressBar(0, GameConfig.INVITE_TIMEOUT_S);
+    private final JLabel countLabel = new JLabel("");
+    private final MenuCountdownBar bar = new MenuCountdownBar(GameConfig.INVITE_TIMEOUT_S);
     private final Timer timer;
     private boolean replied;
 
@@ -40,33 +34,40 @@ public final class InviteDialog extends JDialog {
         this.net = net;
         this.invite = invite;
 
-        JPanel root = new JPanel(new BorderLayout(8, 8));
-        root.setBackground(GameTheme.BG);
-        root.setBorder(BorderFactory.createEmptyBorder(24,32,24,32));
-        JLabel text = new JLabel("<html><b>" + invite.fromUsername() + "</b> (" + invite.fromPoints()
-                + " điểm) mời bạn thi đấu.</html>", SwingConstants.CENTER);
-        text.setFont(text.getFont().deriveFont(14f));
-        root.add(text, BorderLayout.NORTH);
-
-        JPanel center = GameTheme.panel(new BorderLayout(8,16));
+        Responsive.font(countLabel, NfsFonts.hero(46f));
         countLabel.setForeground(GameTheme.ACCENT);
-        countLabel.setFont(countLabel.getFont().deriveFont(Font.BOLD, 20f));
-        bar.setStringPainted(false);
-        center.add(countLabel, BorderLayout.NORTH);
-        center.add(bar, BorderLayout.SOUTH);
-        root.add(center, BorderLayout.CENTER);
-
-        JPanel buttons = GameTheme.panel(new java.awt.FlowLayout(java.awt.FlowLayout.CENTER,12,12));
-        JButton accept = GameTheme.button("CHẤP NHẬN  →",true);
-        JButton reject = GameTheme.button("Từ chối",false);
-        accept.addActionListener(e -> reply(true));
-        reject.addActionListener(e -> reply(false));
+        countLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        JButton accept = GameTheme.button("CHẤP NHẬN  →", true);
+        JButton reject = GameTheme.button("Từ chối", false);
+        GameTheme.fullWidth(accept, GameTheme.CONTROL_H);
+        GameTheme.fullWidth(reject, GameTheme.CONTROL_H);
+        JPanel buttons = GameTheme.panel(new GridLayout(1, 2, 12, 0));
         buttons.add(accept);
         buttons.add(reject);
-        root.add(buttons, BorderLayout.SOUTH);
+        buttons.setAlignmentX(Component.LEFT_ALIGNMENT);
 
-        setContentPane(root);
+        JPanel col = GameTheme.column();
+        col.add(GameTheme.eyebrow("INCOMING CHALLENGE / LỜI MỜI")); GameTheme.gap(col, 2);
+        col.add(GameTheme.label("THÁCH ĐẤU!", NfsFonts.hero(58f), GameTheme.TEXT)); GameTheme.gap(col, 12);
+        col.add(new MenuChallengeBanner("ĐỐI THỦ MỜI BẠN", invite.fromUsername(), invite.fromPoints() + " ĐIỂM")); GameTheme.gap(col, 10);
+        col.add(GameTheme.label("Một trận 1 vs 1 trên đường đua 2.500 m.", GameTheme.BODY, GameTheme.MUTED)); GameTheme.gap(col, 12);
+        col.add(countLabel); GameTheme.gap(col, 4);
+        col.add(bar); GameTheme.gap(col, 20);
+        col.add(buttons);
+
+        JPanel card = GameTheme.card(new BorderLayout(), 26);
+        card.add(col, BorderLayout.CENTER);
+        NfsBackdrop root = new NfsBackdrop();
+        root.add(card);
+        root.setLayout(new HeroCardLayout(null, card, 520, 0, 24));
         GameTheme.decorate(this);
+        float scale = Responsive.scaleOf(owner);
+        ScreenFrame.fit(this, Math.round(660 * scale), Math.round(760 * scale));
+        ScreenFrame.install(this, root, owner);
+        setMinimumSize(new Dimension(420, 420));
+        accept.addActionListener(e -> reply(true));
+        reject.addActionListener(e -> reply(false));
+
         setDefaultCloseOperation(DO_NOTHING_ON_CLOSE);
         addWindowListener(new WindowAdapter() {
             @Override
@@ -82,8 +83,8 @@ public final class InviteDialog extends JDialog {
         timer = new Timer(250, e -> tick());
         tick();
         timer.start();
-        pack();
-        setSize(Math.max(getWidth(), 360), getHeight());
+        validate();
+        setSize(getWidth(), Math.min(getHeight(), card.getPreferredSize().height + Math.round(48 * Responsive.scaleOf(this))));
         setLocationRelativeTo(owner);
     }
 
@@ -95,6 +96,7 @@ public final class InviteDialog extends JDialog {
         long remainMs = invite.expiresAtMillis() - System.currentTimeMillis();
         int remain = (int) Math.max(0, Math.ceil(remainMs / 1000.0));
         countLabel.setText(remain + " giây");
+        countLabel.setForeground(remain <= URGENT_SECONDS ? NfsPalette.RED : GameTheme.ACCENT);
         bar.setValue(Math.min(GameConfig.INVITE_TIMEOUT_S, remain));
         if (remainMs <= 0) {
             dispose();   // hết giờ: không gửi gì

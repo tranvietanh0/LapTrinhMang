@@ -1,28 +1,27 @@
 package racing.client.ui;
 
 import racing.client.net.NetworkClient;
+import racing.client.ui.theme.*;
 import racing.common.GameConfig;
+import racing.common.dto.MatchOutcome;
+import racing.common.dto.MatchRow;
 import racing.common.net.Message;
 import racing.common.net.MessageType;
 
-import javax.swing.BorderFactory;
-import javax.swing.JButton;
-import javax.swing.JFrame;
-import javax.swing.JLabel;
-import javax.swing.JPanel;
-import javax.swing.JScrollPane;
-import javax.swing.JTable;
-import java.awt.BorderLayout;
-import java.awt.Dimension;
-import java.awt.FlowLayout;
+import javax.swing.*;
+import javax.swing.table.TableColumnModel;
+import java.awt.*;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
+import java.util.List;
+import java.util.function.IntFunction;
 
-/** Lịch sử trận của chính mình: gửi MATCH_HISTORY_REQ khi mở, hiển thị MATCH_HISTORY. */
+/** Lịch sử trận của chính mình: gửi MATCH_HISTORY_REQ khi mở, hiển thị MATCH_HISTORY (tổng kết + bảng chip thắng/thua). */
 public final class HistoryFrame extends JFrame {
 
     private final NetworkClient net;
     private final HistoryTableModel model = new HistoryTableModel();
+    private final MenuStatStrip summary = new MenuStatStrip();
     private final JLabel statusLabel = new JLabel("Đang tải…");
     private Runnable off;
 
@@ -33,29 +32,51 @@ public final class HistoryFrame extends JFrame {
 
         JTable table = new JTable(model);
         GameTheme.table(table);
+        Responsive.rowHeight(table, 52);
         table.setEnabled(false);
+        IntFunction<Color> resultStripe = row -> outcomeColor(String.valueOf(table.getValueAt(row, 2)));
+        TableColumnModel columns = table.getColumnModel();
+        columns.getColumn(0).setPreferredWidth(220); columns.getColumn(0).setCellRenderer(MenuCells.text(NfsFonts.strong(16f), GameTheme.MUTED, resultStripe));
+        columns.getColumn(1).setPreferredWidth(300); columns.getColumn(1).setCellRenderer(MenuCells.text(NfsFonts.display(22f), GameTheme.TEXT, null));
+        columns.getColumn(2).setPreferredWidth(160); columns.getColumn(2).setCellRenderer(MenuCells.chip(HistoryFrame::outcomeChip, null));
+        columns.getColumn(3).setPreferredWidth(200); columns.getColumn(3).setCellRenderer(MenuCells.text(NfsFonts.body(16f), GameTheme.MUTED, null));
         JScrollPane scroll = GameTheme.scroll(table);
-        scroll.setPreferredSize(new Dimension(840, 340));
+        scroll.setBorder(BorderFactory.createEmptyBorder());
 
-        JPanel root = new JPanel(new BorderLayout(6, 6));
-        root.setBackground(GameTheme.BG); root.setBorder(BorderFactory.createEmptyBorder(24,32,24,32));
-        JPanel heading=GameTheme.column(); heading.add(GameTheme.eyebrow("RACE ARCHIVE")); GameTheme.gap(heading,12);
-        heading.add(GameTheme.heading("Lịch sử đường đua")); GameTheme.gap(heading,8);
-        heading.add(GameTheme.label(GameConfig.HISTORY_LIMIT+" trận gần nhất của bạn, mới nhất xếp trước.",GameTheme.SMALL,GameTheme.MUTED));
-        GameTheme.gap(heading,16); root.add(heading,BorderLayout.NORTH);
-        root.add(scroll, BorderLayout.CENTER);
-        JPanel south = GameTheme.panel(new FlowLayout(FlowLayout.LEFT,16,16));
-        JButton refresh = GameTheme.button("Làm mới",false);
-        statusLabel.setFont(GameTheme.SMALL); statusLabel.setForeground(GameTheme.MUTED);
+        JPanel heading = GameTheme.column();
+        heading.add(GameTheme.eyebrow("RACE ARCHIVE / NHẬT KÝ ĐƯỜNG ĐUA")); GameTheme.gap(heading, 4);
+        heading.add(GameTheme.heading("LỊCH SỬ ĐƯỜNG ĐUA")); GameTheme.gap(heading, 4);
+        heading.add(GameTheme.label(GameConfig.HISTORY_LIMIT + " trận gần nhất của bạn, mới nhất xếp trước.", GameTheme.SMALL, GameTheme.MUTED));
+        showSummary(List.of());
+
+        JButton refresh = GameTheme.button("Làm mới", false);
+        Responsive.font(statusLabel, GameTheme.SMALL);
+        statusLabel.setForeground(GameTheme.MUTED);
         refresh.addActionListener(e -> request());
-        south.add(refresh);
-        south.add(statusLabel);
-        root.add(south, BorderLayout.SOUTH);
-        setContentPane(root);
+        JPanel footer = GameTheme.panel(new BorderLayout(16, 0));
+        footer.add(statusLabel, BorderLayout.CENTER);
+        footer.add(refresh, BorderLayout.EAST);
+
+        JPanel card = GameTheme.card(new BorderLayout(0, 12), 14);
+        card.add(scroll, BorderLayout.CENTER);
+        card.add(footer, BorderLayout.SOUTH);
+
+        JPanel shell = new MenuPanel(new MenuStackLayout(14), 22, 32);
+        shell.add(heading);
+        shell.add(summary);
+        shell.add(card);
+        NfsBackdrop root = new NfsBackdrop();
+        root.setLayout(new BorderLayout());
+        root.add(shell, BorderLayout.CENTER);
         GameTheme.decorate(this);
+        ScreenFrame.fit(this, 1120, 800);
+        ScreenFrame.install(this, root, new Dimension(860, 580));
+        setLocationRelativeTo(null);
 
         off = net.on(MessageType.MATCH_HISTORY, m -> {
-            model.setRows(m.getPayload());
+            List<MatchRow> rows = m.getPayload();
+            model.setRows(rows);
+            showSummary(rows);
             statusLabel.setText(model.getRowCount() == 0 ? "Chưa có trận nào." : model.getRowCount() + " trận");
         });
         addWindowListener(new WindowAdapter() {
@@ -67,9 +88,29 @@ public final class HistoryFrame extends JFrame {
                 }
             }
         });
-        pack();
-        setLocationRelativeTo(null);
         request();
+    }
+
+    private void showSummary(List<MatchRow> rows) {
+        int total = rows == null ? 0 : rows.size();
+        long wins = rows == null ? 0 : rows.stream().filter(r -> r.outcome() == MatchOutcome.WIN).count();
+        long losses = rows == null ? 0 : rows.stream().filter(r -> r.outcome() == MatchOutcome.LOSE).count();
+        long draws = rows == null ? 0 : rows.stream().filter(r -> r.outcome() == MatchOutcome.DRAW).count();
+        summary.setStats(new String[]{"TỔNG TRẬN", "THẮNG", "THUA", "HÒA"},
+                new String[]{String.valueOf(total), String.valueOf(wins), String.valueOf(losses), String.valueOf(draws)},
+                new Color[]{GameTheme.TEXT, GameTheme.SUCCESS, NfsPalette.RED, GameTheme.ACCENT});
+    }
+
+    private static Color outcomeColor(String text) {
+        if (HistoryTableModel.outcomeText(MatchOutcome.WIN).equals(text)) return GameTheme.SUCCESS;
+        if (HistoryTableModel.outcomeText(MatchOutcome.LOSE).equals(text)) return NfsPalette.RED;
+        if (HistoryTableModel.outcomeText(MatchOutcome.DRAW).equals(text)) return GameTheme.ACCENT;
+        return GameTheme.LINE;
+    }
+
+    private static MenuCells.Chip outcomeChip(String text) {
+        Color color = outcomeColor(text);
+        return new MenuCells.Chip(text.toUpperCase(java.util.Locale.ROOT), color == GameTheme.LINE ? GameTheme.MUTED : color);
     }
 
     private void request() {
