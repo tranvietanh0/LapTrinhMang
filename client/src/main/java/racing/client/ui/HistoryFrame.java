@@ -32,22 +32,27 @@ public final class HistoryFrame extends JFrame {
         setDefaultCloseOperation(DISPOSE_ON_CLOSE);
 
         JTable table = new JTable(model);
-        table.setRowHeight(22);
+        GameTheme.table(table);
         table.setEnabled(false);
-        JScrollPane scroll = new JScrollPane(table);
-        scroll.setPreferredSize(new Dimension(560, 340));
+        JScrollPane scroll = GameTheme.scroll(table);
+        scroll.setPreferredSize(new Dimension(840, 340));
 
         JPanel root = new JPanel(new BorderLayout(6, 6));
-        root.setBorder(BorderFactory.createEmptyBorder(10, 12, 10, 12));
-        root.add(new JLabel(GameConfig.HISTORY_LIMIT + " trận gần nhất, mới nhất xếp trên."), BorderLayout.NORTH);
+        root.setBackground(GameTheme.BG); root.setBorder(BorderFactory.createEmptyBorder(24,32,24,32));
+        JPanel heading=GameTheme.column(); heading.add(GameTheme.eyebrow("RACE ARCHIVE")); GameTheme.gap(heading,12);
+        heading.add(GameTheme.heading("Lịch sử đường đua")); GameTheme.gap(heading,8);
+        heading.add(GameTheme.label(GameConfig.HISTORY_LIMIT+" trận gần nhất của bạn, mới nhất xếp trước.",GameTheme.SMALL,GameTheme.MUTED));
+        GameTheme.gap(heading,16); root.add(heading,BorderLayout.NORTH);
         root.add(scroll, BorderLayout.CENTER);
-        JPanel south = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        JButton refresh = new JButton("Làm mới");
+        JPanel south = GameTheme.panel(new FlowLayout(FlowLayout.LEFT,16,16));
+        JButton refresh = GameTheme.button("Làm mới",false);
+        statusLabel.setFont(GameTheme.SMALL); statusLabel.setForeground(GameTheme.MUTED);
         refresh.addActionListener(e -> request());
         south.add(refresh);
         south.add(statusLabel);
         root.add(south, BorderLayout.SOUTH);
         setContentPane(root);
+        GameTheme.decorate(this);
 
         off = net.on(MessageType.MATCH_HISTORY, m -> {
             model.setRows(m.getPayload());

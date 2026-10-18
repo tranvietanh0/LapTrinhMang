@@ -31,24 +31,28 @@ public final class LeaderboardFrame extends JFrame {
         setDefaultCloseOperation(DISPOSE_ON_CLOSE);
 
         JTable table = new JTable(model);
-        table.setRowHeight(22);
+        GameTheme.table(table);
         table.setEnabled(false);
         table.getColumnModel().getColumn(0).setMaxWidth(60);
-        JScrollPane scroll = new JScrollPane(table);
-        scroll.setPreferredSize(new Dimension(520, 360));
+        JScrollPane scroll = GameTheme.scroll(table);
+        scroll.setPreferredSize(new Dimension(720, 360));
 
         JPanel root = new JPanel(new BorderLayout(6, 6));
-        root.setBorder(BorderFactory.createEmptyBorder(10, 12, 10, 12));
-        root.add(new JLabel("Xếp theo điểm giảm dần, cùng điểm thì nhiều trận thắng hơn xếp trên."),
-                BorderLayout.NORTH);
+        root.setBackground(GameTheme.BG); root.setBorder(BorderFactory.createEmptyBorder(24,32,24,32));
+        JPanel heading=GameTheme.column(); heading.add(GameTheme.eyebrow("DRIVER STANDINGS"));
+        GameTheme.gap(heading,12); heading.add(GameTheme.heading("Bảng xếp hạng")); GameTheme.gap(heading,8);
+        heading.add(GameTheme.label("Điểm cao hơn xếp trước; cùng điểm xét số trận thắng.",GameTheme.SMALL,GameTheme.MUTED));
+        GameTheme.gap(heading,16); root.add(heading,BorderLayout.NORTH);
         root.add(scroll, BorderLayout.CENTER);
-        JPanel south = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        JButton refresh = new JButton("Làm mới");
+        JPanel south = GameTheme.panel(new FlowLayout(FlowLayout.LEFT,16,16));
+        JButton refresh = GameTheme.button("Làm mới",false);
+        statusLabel.setFont(GameTheme.SMALL); statusLabel.setForeground(GameTheme.MUTED);
         refresh.addActionListener(e -> request());
         south.add(refresh);
         south.add(statusLabel);
         root.add(south, BorderLayout.SOUTH);
         setContentPane(root);
+        GameTheme.decorate(this);
 
         off = net.on(MessageType.LEADERBOARD, m -> {
             model.setRows(m.getPayload());

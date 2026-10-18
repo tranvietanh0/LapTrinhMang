@@ -41,22 +41,24 @@ public final class InviteDialog extends JDialog {
         this.invite = invite;
 
         JPanel root = new JPanel(new BorderLayout(8, 8));
-        root.setBorder(BorderFactory.createEmptyBorder(16, 20, 12, 20));
+        root.setBackground(GameTheme.BG);
+        root.setBorder(BorderFactory.createEmptyBorder(24,32,24,32));
         JLabel text = new JLabel("<html><b>" + invite.fromUsername() + "</b> (" + invite.fromPoints()
                 + " điểm) mời bạn thi đấu.</html>", SwingConstants.CENTER);
         text.setFont(text.getFont().deriveFont(14f));
         root.add(text, BorderLayout.NORTH);
 
-        JPanel center = new JPanel(new BorderLayout(4, 4));
+        JPanel center = GameTheme.panel(new BorderLayout(8,16));
+        countLabel.setForeground(GameTheme.ACCENT);
         countLabel.setFont(countLabel.getFont().deriveFont(Font.BOLD, 20f));
         bar.setStringPainted(false);
         center.add(countLabel, BorderLayout.NORTH);
         center.add(bar, BorderLayout.SOUTH);
         root.add(center, BorderLayout.CENTER);
 
-        JPanel buttons = new JPanel();
-        JButton accept = new JButton("Chấp nhận");
-        JButton reject = new JButton("Từ chối");
+        JPanel buttons = GameTheme.panel(new java.awt.FlowLayout(java.awt.FlowLayout.CENTER,12,12));
+        JButton accept = GameTheme.button("CHẤP NHẬN  →",true);
+        JButton reject = GameTheme.button("Từ chối",false);
         accept.addActionListener(e -> reply(true));
         reject.addActionListener(e -> reply(false));
         buttons.add(accept);
@@ -64,6 +66,7 @@ public final class InviteDialog extends JDialog {
         root.add(buttons, BorderLayout.SOUTH);
 
         setContentPane(root);
+        GameTheme.decorate(this);
         setDefaultCloseOperation(DO_NOTHING_ON_CLOSE);
         addWindowListener(new WindowAdapter() {
             @Override

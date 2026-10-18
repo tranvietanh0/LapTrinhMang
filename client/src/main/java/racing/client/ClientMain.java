@@ -1,9 +1,9 @@
 package racing.client;
 
 import racing.common.GameConfig;
+import racing.client.ui.GameTheme;
 
 import javax.swing.SwingUtilities;
-import javax.swing.UIManager;
 
 /**
  * Điểm vào client Swing.
@@ -18,11 +18,7 @@ public final class ClientMain {
     public static void main(String[] args) {
         String host = args.length > 0 ? args[0] : "localhost";
         int port = args.length > 1 ? parsePort(args[1]) : GameConfig.PORT;
-        try {
-            UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
-        } catch (Exception ignored) {
-            // giữ look and feel mặc định
-        }
+        GameTheme.install();
         SwingUtilities.invokeLater(() -> new ClientApp(host, port).start());
     }
 

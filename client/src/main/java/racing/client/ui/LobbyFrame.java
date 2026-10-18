@@ -42,7 +42,9 @@ public final class LobbyFrame extends JFrame {
     private final JTable table = new JTable(model);
     private final JLabel meLabel = new JLabel();
     private final JLabel statusLabel = new JLabel(" ");
-    private final JButton inviteButton = new JButton("Thách đấu");
+    private final JButton inviteButton = GameTheme.button("THÁCH ĐẤU  →",true);
+    private final JLabel onlineLabel = GameTheme.label("",GameTheme.SMALL,GameTheme.MUTED);
+    private final JLabel selectionLabel = GameTheme.label("Chọn một đối thủ đang rảnh để bắt đầu.",GameTheme.BODY,GameTheme.MUTED);
     private final RaceLauncher launcher;
     private final List<Runnable> offs = new ArrayList<>();
     private InviteDialog inviteDialog;
@@ -69,32 +71,61 @@ public final class LobbyFrame extends JFrame {
             }
         });
 
-        JPanel root = new JPanel(new BorderLayout(8, 8));
-        root.setBorder(BorderFactory.createEmptyBorder(10, 12, 10, 12));
-        meLabel.setFont(meLabel.getFont().deriveFont(Font.BOLD, 14f));
-        root.add(meLabel, BorderLayout.NORTH);
+        JPanel root = new JPanel(new BorderLayout(24,24)); root.setBackground(GameTheme.BG);
+        root.setBorder(BorderFactory.createEmptyBorder(24,32,24,32));
+        JPanel header=GameTheme.panel(new BorderLayout());
+        header.add(GameTheme.eyebrow("RACING / ONLINE     —     SẢNH THÁCH ĐẤU"),BorderLayout.WEST);
+        header.add(GameTheme.label("●  ĐÃ KẾT NỐI",GameTheme.SMALL,GameTheme.SUCCESS),BorderLayout.EAST);
+        root.add(header,BorderLayout.NORTH);
+
+        JPanel sidebar=GameTheme.card(new BorderLayout(0,24),24);
+        sidebar.setPreferredSize(new Dimension(260,640));
+        JPanel profile=GameTheme.column();
+        profile.add(GameTheme.eyebrow("HỒ SƠ TAY ĐUA")); GameTheme.gap(profile,16);
+        meLabel.setForeground(GameTheme.TEXT); meLabel.setFont(GameTheme.BODY);
+        profile.add(meLabel); sidebar.add(profile,BorderLayout.NORTH);
+        JPanel navigation=GameTheme.column();
+        JButton leaderboard=GameTheme.button("Bảng xếp hạng",false);
+        JButton history=GameTheme.button("Lịch sử trận",false);
+        JButton logout=GameTheme.button("Đăng xuất",false);
+        for(JButton button:new JButton[]{leaderboard,history,logout}) {
+            GameTheme.fullWidth(button,GameTheme.CONTROL_H); navigation.add(button); GameTheme.gap(navigation,12);
+        }
+        GameTheme.gap(navigation,24);
+        navigation.add(GameTheme.label("ĐƯỜNG ĐUA / 2.500 M",GameTheme.STRONG.deriveFont(12f),GameTheme.TEXT));
+        GameTheme.gap(navigation,12);
+        navigation.add(GameTheme.label("W / ↑     Tăng tốc",GameTheme.SMALL,GameTheme.MUTED));
+        GameTheme.gap(navigation,8);
+        navigation.add(GameTheme.label("S / ↓      Phanh",GameTheme.SMALL,GameTheme.MUTED));
+        GameTheme.gap(navigation,8);
+        navigation.add(GameTheme.label("A / D      Đổi làn",GameTheme.SMALL,GameTheme.MUTED));
+        sidebar.add(navigation,BorderLayout.CENTER); root.add(sidebar,BorderLayout.WEST);
+
+        JPanel arena=GameTheme.panel(new BorderLayout(0,24));
+        JPanel arenaHeader=GameTheme.column();
+        arenaHeader.add(GameTheme.heading("Tìm đối thủ. Vào đường đua.")); GameTheme.gap(arenaHeader,8);
+        arenaHeader.add(onlineLabel); arena.add(arenaHeader,BorderLayout.NORTH);
 
         table.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
-        table.setRowHeight(24);
+        GameTheme.table(table);
         table.setAutoCreateRowSorter(false);
         table.getSelectionModel().addListSelectionListener(e -> refreshInviteButton());
-        JScrollPane scroll = new JScrollPane(table);
-        scroll.setPreferredSize(new Dimension(520, 300));
-        root.add(scroll, BorderLayout.CENTER);
+        table.getColumnModel().getColumn(0).setPreferredWidth(240);
+        JScrollPane scroll = GameTheme.scroll(table);
+        scroll.setPreferredSize(new Dimension(620,320));
+        arena.add(scroll,BorderLayout.CENTER);
 
-        JPanel south = new JPanel(new BorderLayout(4, 4));
-        JPanel buttons = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        JButton leaderboard = new JButton("Bảng xếp hạng");
-        JButton history = new JButton("Lịch sử trận");
-        JButton logout = new JButton("Đăng xuất");
-        buttons.add(inviteButton);
-        buttons.add(leaderboard);
-        buttons.add(history);
-        buttons.add(logout);
-        south.add(buttons, BorderLayout.NORTH);
+        JPanel south = GameTheme.panel(new BorderLayout(16,16));
+        JPanel action=GameTheme.panel(new BorderLayout(16,0));
+        inviteButton.setPreferredSize(new Dimension(190,GameTheme.CONTROL_H));
+        action.add(selectionLabel,BorderLayout.CENTER); action.add(inviteButton,BorderLayout.EAST);
+        south.add(action,BorderLayout.NORTH);
+        statusLabel.setPreferredSize(new Dimension(600,36));
+        GameTheme.status(statusLabel,"Sẵn sàng. Chọn đối thủ để bắt đầu.",GameTheme.MUTED);
         south.add(statusLabel, BorderLayout.SOUTH);
-        root.add(south, BorderLayout.SOUTH);
+        arena.add(south,BorderLayout.SOUTH); root.add(arena,BorderLayout.CENTER);
         setContentPane(root);
+        GameTheme.decorate(this);
 
         inviteButton.addActionListener(e -> invite());
         leaderboard.addActionListener(e -> new LeaderboardFrame(net).setVisible(true));
@@ -102,9 +133,11 @@ public final class LobbyFrame extends JFrame {
         logout.addActionListener(e -> app.logout());
 
         registerListeners();
+        onOnlineList(state.online());
         updateMe();
         refreshInviteButton();
         pack();
+        setMinimumSize(new Dimension(1040,620));
         setLocationRelativeTo(null);
     }
 
@@ -122,6 +155,8 @@ public final class LobbyFrame extends JFrame {
         String selected = selectedUsername();
         state.setOnline(list);
         model.setRows(state.online(), state.me() == null ? null : state.me().username());
+        int others=(int)state.online().stream().filter(p->state.me()==null || !p.username().equals(state.me().username())).count();
+        onlineLabel.setText(others==0 ? "Chưa có đối thủ online. Mời bạn bè kết nối vào cùng server." : others+" đối thủ online • Chọn một người chơi để thách đấu.");
         if (selected != null) {
             int row = model.rowOf(selected);
             if (row >= 0) {
@@ -192,15 +227,20 @@ public final class LobbyFrame extends JFrame {
         if (state.hasPendingInvite()) {
             inviteButton.setText("Đang chờ trả lời…");
         } else {
-            inviteButton.setText("Thách đấu");
+            inviteButton.setText("THÁCH ĐẤU  →");
         }
+        selectionLabel.setText(target==null ? "Chọn một đối thủ đang rảnh." : "Đối thủ: "+target.username());
     }
 
     private void updateMe() {
         PlayerInfo me = state.me();
         if (me != null) {
-            meLabel.setText("Xin chào " + me.username() + "  |  Điểm: " + me.points()
-                    + "  |  Thắng: " + me.wins());
+            String displayName=me.username().length()>14 ? me.username().substring(0,13)+"…" : me.username();
+            meLabel.setToolTipText(me.username());
+            meLabel.setText("<html><span style='font-size:24px'><b>"+GameTheme.html(displayName)
+                    +"</b></span><br><br><span style='color:#AAB4C3'>ĐIỂM XẾP HẠNG</span><br>"
+                    +"<span style='font-size:28px'>"+me.points()+"</span><br><br><span style='color:#AAB4C3'>TRẬN THẮNG</span><br>"
+                    +"<span style='font-size:28px'>"+me.wins()+"</span></html>");
         }
     }
 
@@ -210,7 +250,6 @@ public final class LobbyFrame extends JFrame {
     }
 
     private void setStatus(String text, boolean isError) {
-        statusLabel.setText(text == null ? " " : text);
-        statusLabel.setForeground(isError ? new Color(0xB00020) : new Color(0x333333));
+        GameTheme.status(statusLabel,text,isError?GameTheme.ERROR:GameTheme.SUCCESS);
     }
 }
