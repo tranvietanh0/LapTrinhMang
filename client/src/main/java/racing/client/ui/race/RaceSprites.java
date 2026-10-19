@@ -26,7 +26,7 @@ final class RaceSprites {
     final double s;
     final int laneW, roadW, kerbW;
 
-    private BufferedImage road, ground, beam, pool, streak, start, finish;
+    private BufferedImage road, ground, beam, pool, streak, start, finish, spark, puff, flag;
     private final BufferedImage[] own = new BufferedImage[2];
     private final BufferedImage[] traffic = new BufferedImage[RaceCarArt.TRAFFIC.length];
     private final BufferedImage[] explosion = new BufferedImage[2];
@@ -122,6 +122,21 @@ final class RaceSprites {
     BufferedImage finishBanner() {
         if (finish == null) finish = RaceScenery.banner(s, "FINISH", true);
         return finish;
+    }
+
+    BufferedImage spark() {
+        if (spark == null) spark = RaceBurst.bakeSpark(s);
+        return spark;
+    }
+
+    BufferedImage puff() {
+        if (puff == null) puff = RaceBurst.bakePuff(s);
+        return puff;
+    }
+
+    BufferedImage flag() {
+        if (flag == null) flag = RaceBurst.bakeFlag(s);
+        return flag;
     }
 
     int px(double logical) {

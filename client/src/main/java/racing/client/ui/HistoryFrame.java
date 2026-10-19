@@ -34,6 +34,7 @@ public final class HistoryFrame extends JFrame {
         GameTheme.table(table);
         Responsive.rowHeight(table, 52);
         table.setEnabled(false);
+        TableMotion rowMotion = TableMotion.attach(table);
         IntFunction<Color> resultStripe = row -> outcomeColor(String.valueOf(table.getValueAt(row, 2)));
         TableColumnModel columns = table.getColumnModel();
         columns.getColumn(0).setPreferredWidth(220); columns.getColumn(0).setCellRenderer(MenuCells.text(NfsFonts.strong(16f), GameTheme.MUTED, resultStripe));
@@ -61,10 +62,12 @@ public final class HistoryFrame extends JFrame {
         card.add(scroll, BorderLayout.CENTER);
         card.add(footer, BorderLayout.SOUTH);
 
-        JPanel shell = new MenuPanel(new MenuStackLayout(14), 22, 32);
+        MenuPanel shell = new MenuPanel(new MenuStackLayout(14), 22, 32);
         shell.add(heading);
         shell.add(summary);
         shell.add(card);
+        RevealPanel.style(heading, RevealPanel.Style.SLIDE);
+        shell.reveal(0, 90);
         NfsBackdrop root = new NfsBackdrop();
         root.setLayout(new BorderLayout());
         root.add(shell, BorderLayout.CENTER);
@@ -77,6 +80,7 @@ public final class HistoryFrame extends JFrame {
             List<MatchRow> rows = m.getPayload();
             model.setRows(rows);
             showSummary(rows);
+            rowMotion.revealFirstLoad();
             statusLabel.setText(model.getRowCount() == 0 ? "Chưa có trận nào." : model.getRowCount() + " trận");
         });
         addWindowListener(new WindowAdapter() {

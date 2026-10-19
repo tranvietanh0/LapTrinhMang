@@ -46,7 +46,7 @@ public final class InviteDialog extends JDialog {
         buttons.add(reject);
         buttons.setAlignmentX(Component.LEFT_ALIGNMENT);
 
-        JPanel col = GameTheme.column();
+        RevealPanel col = RevealPanel.column();
         col.add(GameTheme.eyebrow("INCOMING CHALLENGE / LỜI MỜI")); GameTheme.gap(col, 2);
         col.add(GameTheme.label("THÁCH ĐẤU!", NfsFonts.hero(58f), GameTheme.TEXT)); GameTheme.gap(col, 12);
         col.add(new MenuChallengeBanner("ĐỐI THỦ MỜI BẠN", invite.fromUsername(), invite.fromPoints() + " ĐIỂM")); GameTheme.gap(col, 10);
@@ -57,9 +57,15 @@ public final class InviteDialog extends JDialog {
 
         JPanel card = GameTheme.card(new BorderLayout(), 26);
         card.add(col, BorderLayout.CENTER);
+        RevealPanel stage = new RevealPanel(null);
+        stage.add(RevealPanel.style(card, RevealPanel.Style.POP));
+        stage.setLayout(new HeroCardLayout(null, card, 520, 0, 24));
         NfsBackdrop root = new NfsBackdrop();
-        root.add(card);
-        root.setLayout(new HeroCardLayout(null, card, 520, 0, 24));
+        root.setLayout(new BorderLayout());
+        root.add(stage, BorderLayout.CENTER);
+        // entrance: the card pops in with a small overshoot, its lines follow quickly
+        stage.reveal(0, 0, card);
+        col.reveal(140, 30);
         GameTheme.decorate(this);
         float scale = Responsive.scaleOf(owner);
         ScreenFrame.fit(this, Math.round(660 * scale), Math.round(760 * scale));

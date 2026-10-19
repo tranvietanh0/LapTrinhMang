@@ -1,6 +1,7 @@
 package racing.client.ui.race;
 
 import racing.client.ui.theme.Chamfer;
+import racing.client.ui.theme.Motion;
 import racing.client.ui.theme.NfsFonts;
 import racing.client.ui.theme.NfsPalette;
 
@@ -16,16 +17,19 @@ import java.awt.geom.Rectangle2D;
 import java.awt.image.BufferedImage;
 import java.awt.image.ConvolveOp;
 import java.awt.image.Kernel;
-import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Big centred "3 - 2 - 1 - GO!" overlay. Each word is baked once per scale into a glowing image;
  * the per-frame work is one scaled blit with a pop-in / fade-out animation and, on GO, a flash.
  */
 final class RaceCountdown {
-    private final Map<String, BufferedImage> words = new HashMap<>();
-    private float builtFor = -1;
+    private static final double PUNCH_S = 0.30;
+    /** Every word the server can send; all but the first are pre-baked off the EDT (~150 ms each). */
+    private static final String[] WORDS = {"3", "2", "1", "GO!"};
+    private final Map<String, BufferedImage> words = new ConcurrentHashMap<>();
+    private volatile float builtFor = -1;
     private BufferedImage flash, band;
     private int bandW = -1;
     private String text;
@@ -47,24 +51,29 @@ final class RaceCountdown {
     }
 
     void paint(Graphics2D g, int w, int cy, float u, long nowNanos) {
-        if (text == null) {
-            return;
-        }
-        if (u != builtFor) {
+        if (u != builtFor) {                 // also before the countdown starts: warm every word early
             words.clear();
             builtFor = u;
             flash = null;
             band = null;
+            prebake(text, u);
+        }
+        if (text == null) {
+            return;
         }
         BufferedImage img = words.get(text);
         if (img == null) {
             img = word(text, u);
             words.put(text, img);
+            nowNanos = System.nanoTime();   // the bake takes a while: start the punch-in from its first visible frame
+            stampNanos = nowNanos;
         }
         boolean go = text.startsWith("GO");
         double age = Math.max(0, (nowNanos - stampNanos) / 1e9);
-        double scale = go ? 1 + age * 0.55 : 1 + 0.55 * Math.exp(-age * 11);
-        double alpha = go ? 1 - Math.max(0, age - 0.28) / 0.32 : (age < 0.72 ? 1 : Math.max(0.1, 1 - (age - 0.72) / 0.28));
+        // numbers punch in: big and transparent, slam to a slight undershoot (OUT_BACK), settle at 1
+        double scale = go ? 1 + age * 0.55 : 1.75 - 0.75 * Motion.OUT_BACK.apply((float) Math.min(1, age / PUNCH_S));
+        double alpha = go ? 1 - Math.max(0, age - 0.28) / 0.32
+                : age < 0.12 ? age / 0.12 : (age < 0.72 ? 1 : Math.max(0.1, 1 - (age - 0.72) / 0.28));
         if (band == null || bandW != w) {
             band = band(w, Math.round(img.getHeight() * 0.8f));
             bandW = w;
@@ -83,6 +92,18 @@ final class RaceCountdown {
         g.drawImage(img, w / 2 - dw / 2, cy - dh / 2, dw, dh, null);
         g.setRenderingHint(RenderingHints.KEY_INTERPOLATION, old == null ? RenderingHints.VALUE_INTERPOLATION_NEAREST_NEIGHBOR : old);
         g.setComposite(RaceGfx.ALPHA[16]);
+    }
+
+    /** Bakes the words not on screen yet on a daemon thread; a word still missing when needed is baked inline. */
+    private void prebake(String showing, float u) {
+        Thread t = new Thread(() -> {
+            for (String w : WORDS) {
+                if (builtFor != u) return;               // scale changed again: that bake owns the cache now
+                if (!w.equals(showing)) words.putIfAbsent(w, word(w, u));
+            }
+        }, "countdown-prebake");
+        t.setDaemon(true);
+        t.start();
     }
 
     private static BufferedImage band(int w, int h) {

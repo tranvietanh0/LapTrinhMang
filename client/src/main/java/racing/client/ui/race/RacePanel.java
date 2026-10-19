@@ -2,6 +2,7 @@ package racing.client.ui.race;
 
 import racing.client.model.CarModel;
 import racing.client.ui.theme.Chamfer;
+import racing.client.ui.theme.Motion;
 import racing.client.ui.theme.NfsFonts;
 import racing.client.ui.theme.NfsPalette;
 import racing.common.dto.Obstacle;
@@ -34,6 +35,8 @@ public final class RacePanel extends JPanel {
     private static final int FRAME_MS = 16;
     private static final int MAX_NAME = 14;
     private static final Color STATUS_DOT = NfsPalette.AMBER;
+    /** Rank / status text pop when it changes (1ST to 2ND, VA CHẠM!, VỀ ĐÍCH!). */
+    private static final long RANK_POP_NANOS = 380_000_000L;
 
     private final TrackView mine;
     private final TrackView opponent;
@@ -49,6 +52,8 @@ public final class RacePanel extends JPanel {
     private String statusChipText;
     private float statusChipScale;
     private final RaceClock raceClock = new RaceClock();
+    private final String[] shownRank = new String[2];
+    private final long[] rankChangedAt = new long[2];
 
     public RacePanel(CarModel myCar, CarModel opponentCar) {
         this.mine = new TrackView(myCar, false, 17);
@@ -85,6 +90,7 @@ public final class RacePanel extends JPanel {
         raceClock.reset();
         mine.resetRound();
         opponent.resetRound();
+        shownRank[0] = shownRank[1] = null;
         repaint();
     }
 
@@ -163,8 +169,8 @@ public final class RacePanel extends JPanel {
         paintDivider(g, sideW, divider, viewH);
 
         hud.paintTop(g, mine.renderDist(), opponent.renderDist());
-        paintDash(g, mine, opponent, true, 0, sideW, viewH);
-        paintDash(g, opponent, mine, false, sideW + divider, rightW, viewH);
+        paintDash(g, mine, opponent, true, 0, sideW, viewH, nowNanos);
+        paintDash(g, opponent, mine, false, sideW + divider, rightW, viewH, nowNanos);
         g.setColor(NfsPalette.VOID);
         g.fillRect(sideW, hud.topH + viewH, divider, hud.dashH);
 
@@ -183,7 +189,8 @@ public final class RacePanel extends JPanel {
         g.fillRect(x + width - 1, hud.topH, 1, viewH);
     }
 
-    private void paintDash(Graphics2D g, TrackView view, TrackView other, boolean isMine, int x, int width, int viewH) {
+    private void paintDash(Graphics2D g, TrackView view, TrackView other, boolean isMine, int x, int width, int viewH,
+                           long nowNanos) {
         CarModel car = view.car();
         Color accent = isMine ? RaceHud.ME : RaceHud.RIVAL;
         String rank;
@@ -204,7 +211,21 @@ public final class RacePanel extends JPanel {
             rank = "2ND";
             rankColor = NfsPalette.MUTED;
         }
-        hud.paintDash(g, x, hud.topH + viewH, width, isMine, car.speed(), view.renderDist(), rank, rankColor, status);
+        hud.paintDash(g, x, hud.topH + viewH, width, isMine, view.shownSpeed(), view.renderDist(), rank, rankColor, status,
+                rankPop(isMine ? 0 : 1, rank, nowNanos));
+    }
+
+    /** Scale of the rank text: pops in (OUT_BACK) for a moment after it changes, otherwise exactly 1. */
+    private float rankPop(int side, String rank, long nowNanos) {
+        if (!rank.equals(shownRank[side])) {
+            rankChangedAt[side] = shownRank[side] == null ? nowNanos - RANK_POP_NANOS : nowNanos;
+            shownRank[side] = rank;
+        }
+        long age = nowNanos - rankChangedAt[side];
+        if (age >= RANK_POP_NANOS) {
+            return 1f;
+        }
+        return 0.45f + 0.55f * Motion.OUT_BACK.apply(age / (float) RANK_POP_NANOS);
     }
 
     /** Dòng trạng thái (đang đếm ngược, đang chờ đối thủ...) dạng viên thuốc ở giữa, chỉ dựng lại khi đổi chữ. */

@@ -9,13 +9,17 @@ import java.awt.geom.Path2D;
 /**
  * Angled-corner button with animated hover glow and press feedback. Primary = amber fill,
  * secondary = dark glass with an outline. Reserves {@link #GLOW} px around the shape for the glow.
+ * Optional motion (all via {@link Motion}): a light sweep every few seconds ({@link #setSheen}) and
+ * marching stripes while waiting on the network ({@link #setBusy}).
  */
 public final class ChamferButton extends JButton {
     public static final int GLOW = 4;
+    private static final int SHEEN_MS = 900, SHEEN_EVERY_MS = 4200, BUSY_LOOP_MS = 900;
     private final boolean primary;
-    private final Timer anim = new Timer(16, e -> step());
     private float hover;      // 0..1 animated
-    private boolean hovered;
+    private boolean sheen, busy;
+    private float sheenPos = -1f, busyPhase; // sweep position 0..1 (< 0 = none), stripe phase 0..1
+    private Motion.Tween hoverTween, sheenTween, busyTween;
     private Path2D.Float shape;
     private int shapeW = -1, shapeH = -1;
     private Paint fillPaint;
@@ -33,8 +37,8 @@ public final class ChamferButton extends JButton {
         setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         Responsive.font(this, NfsFonts.tracked(NfsFonts.display(19f), 0.04f));
         addMouseListener(new MouseAdapter() {
-            @Override public void mouseEntered(MouseEvent e) { hovered = true; anim.start(); }
-            @Override public void mouseExited(MouseEvent e) { hovered = false; anim.start(); }
+            @Override public void mouseEntered(MouseEvent e) { hoverTo(isEnabled() ? 1f : 0f); }
+            @Override public void mouseExited(MouseEvent e) { hoverTo(0f); }
         });
         getModel().addChangeListener(e -> repaint());
     }
@@ -42,11 +46,46 @@ public final class ChamferButton extends JButton {
     @Override
     public void setText(String text) { super.setText(NfsFonts.safe(text)); }
 
-    private void step() {
-        float target = hovered && isEnabled() ? 1f : 0f;
-        hover += Math.signum(target - hover) * 0.18f;
-        if (Math.abs(target - hover) < 0.18f) { hover = target; anim.stop(); }
+    private void hoverTo(float target) {
+        if (hoverTween != null) hoverTween.stop();
+        float from = hover;
+        hoverTween = Motion.play(this, Motion.FAST, Motion.OUT_CUBIC, e -> { hover = from + (target - from) * e; repaint(); });
+    }
+
+    /** Sweeps a soft light band across the button every few seconds while it is on screen and enabled. */
+    public void setSheen(boolean on) {
+        sheen = on;
+        if (on && isDisplayable()) startSheen();
+        else if (!on && sheenTween != null) { sheenTween.stop(); sheenPos = -1f; repaint(); }
+    }
+
+    private void startSheen() {
+        if (sheenTween != null && sheenTween.running()) return;
+        float idle = SHEEN_EVERY_MS - SHEEN_MS;
+        sheenTween = Motion.play(this, SHEEN_EVERY_MS, Motion.LINEAR, e -> {
+            float t = (e * SHEEN_EVERY_MS - idle) / SHEEN_MS;
+            if (t < 0f) return; // idle part of the loop: no repaint at all
+            sheenPos = Motion.IN_OUT_SINE.apply(Math.min(1f, t));
+            repaint();
+        }).then(() -> {
+            sheenPos = -1f;
+            repaint();
+            if (sheen && isDisplayable()) sheenTween.start();
+        });
+    }
+
+    /** Busy look (marching stripes) while a request is in flight; callers still disable the button. */
+    public void setBusy(boolean on) {
+        if (busy == on) return;
+        busy = on;
+        if (on && isDisplayable()) startBusy();
+        else if (!on && busyTween != null) busyTween.stop();
         repaint();
+    }
+
+    private void startBusy() {
+        busyTween = Motion.play(this, BUSY_LOOP_MS, Motion.LINEAR, e -> { busyPhase = e; repaint(); })
+                .then(() -> { if (busy && isDisplayable()) busyTween.start(); });
     }
 
     @Override
@@ -58,7 +97,19 @@ public final class ChamferButton extends JButton {
     }
 
     @Override
-    public void removeNotify() { anim.stop(); super.removeNotify(); }
+    public void addNotify() {
+        super.addNotify();
+        if (sheen) startSheen();
+        if (busy) startBusy();
+    }
+
+    @Override
+    public void removeNotify() {
+        for (Motion.Tween t : new Motion.Tween[]{hoverTween, sheenTween, busyTween}) if (t != null) t.stop();
+        hover = 0f;
+        sheenPos = -1f;
+        super.removeNotify();
+    }
 
     @Override
     protected void paintComponent(Graphics graphics) {
@@ -89,6 +140,12 @@ public final class ChamferButton extends JButton {
             }
         }
         g.translate(0, pressed ? 1 : 0);
+        if (busy) {
+            ButtonFx.busy(g, shape, w, h, busyPhase);
+            paintLabel(g, w, h, NfsPalette.TEXT);
+            g.dispose();
+            return;
+        }
         g.setPaint(on ? fillPaint : NfsPalette.SURFACE);
         g.fill(shape);
         if (on && hover > 0f) {
@@ -104,12 +161,15 @@ public final class ChamferButton extends JButton {
             g.setColor(NfsPalette.alpha(Color.WHITE, 0.35f));
             g.fillRect(GLOW + 14, GLOW, w - 2 * GLOW - 14, 1);
         }
+        if (on && sheenPos >= 0f) ButtonFx.sheen(g, shape, w, h, sheenPos);
+        paintLabel(g, w, h, !on ? NfsPalette.MUTED : primary ? NfsPalette.VOID : NfsPalette.TEXT);
+        g.dispose();
+    }
+
+    private void paintLabel(Graphics2D g, int w, int h, Color color) {
         g.setFont(getFont());
         FontMetrics fm = g.getFontMetrics();
-        int tx = (w - fm.stringWidth(getText())) / 2;
-        int ty = (h - fm.getHeight()) / 2 + fm.getAscent();
-        g.setColor(!on ? NfsPalette.MUTED : primary ? NfsPalette.VOID : NfsPalette.TEXT);
-        g.drawString(getText(), tx, ty);
-        g.dispose();
+        g.setColor(color);
+        g.drawString(getText(), (w - fm.stringWidth(getText())) / 2, (h - fm.getHeight()) / 2 + fm.getAscent());
     }
 }

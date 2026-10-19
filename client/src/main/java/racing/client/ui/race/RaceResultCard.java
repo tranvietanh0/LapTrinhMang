@@ -2,6 +2,7 @@ package racing.client.ui.race;
 
 import racing.client.ui.GameTheme;
 import racing.client.ui.theme.Chamfer;
+import racing.client.ui.theme.Motion;
 import racing.client.ui.theme.NfsFonts;
 import racing.client.ui.theme.NfsPalette;
 import racing.common.GameConfig;
@@ -11,7 +12,6 @@ import racing.common.dto.MatchResult;
 
 import javax.swing.JButton;
 import javax.swing.JPanel;
-import javax.swing.Timer;
 import java.awt.BasicStroke;
 import java.awt.Color;
 import java.awt.Dimension;
@@ -29,13 +29,16 @@ import java.awt.image.BufferedImage;
 import java.util.Locale;
 
 /**
- * The dramatic VICTORY / DEFEAT card: outcome glow and speed lines, a huge italic title that pops in,
- * the reason and three stat plates (time, average speed, points). Chrome and title are baked per size;
- * a short intro timer animates the title and plates, then stops.
+ * The dramatic VICTORY / DEFEAT card: outcome glow and speed lines, a huge italic title, the reason
+ * and three stat plates (time, average speed, points). Chrome and title are baked per size. A one-shot
+ * intro ({@link Motion}) slams the title in, slides the plates up one after another while their numbers
+ * count up, then fades the continue button in; it stops by itself and ends on the static card.
  */
 final class RaceResultCard extends JPanel {
     static final int BASE_W = 680, BASE_H = 470;
-    private static final int INTRO_MS = 620;
+    /** Intro timeline (ms from the first paint on screen). */
+    private static final int INTRO_MS = 1400, TITLE_MS = 460, TEXT_AT = 260, PLATE_AT = 420, PLATE_STEP = 120,
+            PLATE_MS = 420, COUNT_MS = 650, BUTTON_AT = 1050;
 
     private final MatchResult result;
     private final String me, opponent;
@@ -43,8 +46,9 @@ final class RaceResultCard extends JPanel {
     private final JButton close;
     private final Color accent, accent2;
     private final String title, subtitle, reason;
-    private final Timer intro = new Timer(16, e -> repaint());
-    private long openedAt;
+    private Motion.Tween intro;
+    private float progress = 1f;
+    private boolean frozen;
     private BufferedImage chrome, titleImage;
     private int builtW = -1, builtH = -1;
 
@@ -91,17 +95,47 @@ final class RaceResultCard extends JPanel {
         return close;
     }
 
-    @Override
-    public void addNotify() {
-        super.addNotify();
-        openedAt = System.nanoTime();
-        intro.start();
+    /** Pins the intro at {@code t} (0..1) for snapshots; the card then never animates by itself. */
+    void freezeAt(float t) {
+        frozen = true;
+        progress = Math.max(0f, Math.min(1f, t));
+        repaint();
     }
 
     @Override
     public void removeNotify() {
-        intro.stop();
+        if (intro != null) intro.stop();
         super.removeNotify();
+    }
+
+    /** Starts the intro on the first on-screen paint; off-screen painting (printing, snapshots) shows the end state. */
+    private double introMs() {
+        if (!frozen && intro == null && isShowing()) {
+            progress = 0f;
+            intro = Motion.play(this, INTRO_MS, Motion.LINEAR, e -> {
+                progress = e;
+                repaint();
+            });
+        }
+        return progress * (double) INTRO_MS;
+    }
+
+    private static double phase(double ms, int start, int duration) {
+        return Math.max(0, Math.min(1, (ms - start) / duration));
+    }
+
+    @Override
+    protected void paintChildren(Graphics graphics) {
+        double b = Motion.OUT_CUBIC.apply((float) phase(progress * (double) INTRO_MS, BUTTON_AT, INTRO_MS - BUTTON_AT));
+        if (b >= 1) {
+            super.paintChildren(graphics);
+            return;
+        }
+        Graphics2D g = (Graphics2D) graphics.create();   // the continue button fades and rises in last
+        g.setComposite(RaceGfx.alpha(b));
+        g.translate(0, Math.round((1 - b) * 14 * u));
+        super.paintChildren(g);
+        g.dispose();
     }
 
     @Override
@@ -122,49 +156,63 @@ final class RaceResultCard extends JPanel {
             builtW = w;
             builtH = h;
         }
-        // off-screen painting (printing, screenshots) always shows the finished card
-        double t = isShowing() ? Math.max(0, Math.min(1, (System.nanoTime() - openedAt) / (INTRO_MS * 1e6))) : 1;
-        if (t >= 1) {
-            intro.stop();
-        }
-        double ease = 1 - Math.pow(1 - t, 3);
+        double ms = introMs();
         Graphics2D g = (Graphics2D) graphics.create();
         g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
         g.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
         g.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
         g.drawImage(chrome, 0, 0, null);
 
-        double scale = 1 + 0.45 * (1 - ease);
+        // title slams in: 1.4x and transparent, OUT_BACK down through 1 with a small undershoot
+        double tt = phase(ms, 0, TITLE_MS);
+        double scale = 1.4 - 0.4 * Motion.OUT_BACK.apply((float) tt);
         int dw = (int) Math.round(titleImage.getWidth() * scale), dh = (int) Math.round(titleImage.getHeight() * scale);
-        g.setComposite(RaceGfx.alpha(Math.min(1, t * 2.2)));
+        g.setComposite(RaceGfx.alpha(Math.min(1, tt * 2.5)));
         g.drawImage(titleImage, (w - dw) / 2, Math.round(122 * u) - dh / 2, dw, dh, null);
-        g.setComposite(RaceGfx.alpha(Math.max(0, (t - 0.35) / 0.65)));
 
+        double text = Motion.OUT_CUBIC.apply((float) phase(ms, TEXT_AT, 300));
+        g.setComposite(RaceGfx.alpha(text));
+        int lift = (int) Math.round((1 - text) * 10 * u);
         g.setFont(NfsFonts.tracked(NfsFonts.display(23 * u), 0.06f));
         g.setColor(accent2);
-        centered(g, NfsFonts.safe(subtitle).toUpperCase(Locale.ROOT), w / 2, Math.round(212 * u));
+        centered(g, NfsFonts.safe(subtitle).toUpperCase(Locale.ROOT), w / 2, Math.round(212 * u) + lift);
         g.setFont(NfsFonts.body(16 * u));
         g.setColor(NfsPalette.MUTED);
-        centered(g, NfsFonts.safe(reason), w / 2, Math.round(240 * u));
-        paintStats(g, w);
+        centered(g, NfsFonts.safe(reason), w / 2, Math.round(240 * u) + lift);
+        paintStats(g, w, ms);
         g.dispose();
     }
 
-    private void paintStats(Graphics2D g, int w) {
+    /** Three plates sliding up one after another; each number counts up from 0 while its plate lands. */
+    private void paintStats(Graphics2D g, int w, double ms) {
         int pad = Math.round(36 * u), gap = Math.round(14 * u);
         int pw = (w - 2 * pad - 2 * gap) / 3, ph = Math.round(84 * u), py = Math.round(264 * u);
         boolean paced = result.elapsedMillis() > 0;
         boolean ranked = result.reason() == EndReason.FINISH || result.reason() == EndReason.DRAW;
-        String time = paced ? String.format(Locale.ROOT, "%.1f S", result.elapsedMillis() / 1000.0) : "—";
+        double c0 = count(ms, 0), c1 = count(ms, 1), c2 = count(ms, 2);
+        String time = paced ? String.format(Locale.ROOT, "%.1f S", result.elapsedMillis() * c0 / 1000.0) : "—";
         String avg = paced && ranked
-                ? Math.round(GameConfig.TRACK_LENGTH / (result.elapsedMillis() / 1000.0) * 3.6) + " KM/H" : "—";
-        plate(g, pad, py, pw, ph, "THỜI GIAN", time, null, null);
-        plate(g, pad + pw + gap, py, pw, ph, "TỐC ĐỘ TB", avg, null, null);
-        plate(g, pad + 2 * (pw + gap), py, pw, ph, "ĐIỂM", result.myPoints() + " – " + result.opponentPoints(),
-                clip(g, me + " · " + opponent, pw - Math.round(24 * u), NfsFonts.strong(12 * u)), result.myPoints());
+                ? Math.round(GameConfig.TRACK_LENGTH / (result.elapsedMillis() / 1000.0) * 3.6 * c1) + " KM/H" : "—";
+        String points = Math.round(result.myPoints() * c2) + " – " + Math.round(result.opponentPoints() * c2);
+        plate(g, pad, py, pw, ph, "THỜI GIAN", time, null, null, ms, 0);
+        plate(g, pad + pw + gap, py, pw, ph, "TỐC ĐỘ TB", avg, null, null, ms, 1);
+        plate(g, pad + 2 * (pw + gap), py, pw, ph, "ĐIỂM", points,
+                clip(g, me + " · " + opponent, pw - Math.round(24 * u), NfsFonts.strong(12 * u)), result.myPoints(), ms, 2);
+        g.setComposite(RaceGfx.ALPHA[16]);
     }
 
-    private void plate(Graphics2D g, int x, int y, int w, int h, String caption, String value, String sub, Integer mine) {
+    private static double count(double ms, int i) {
+        return Motion.OUT_CUBIC.apply((float) phase(ms, PLATE_AT + i * PLATE_STEP, COUNT_MS));
+    }
+
+    private void plate(Graphics2D g, int x, int y0, int w, int h, String caption, String value, String sub, Integer mine,
+                       double ms, int index) {
+        double e = Motion.OUT_CUBIC.apply((float) phase(ms, PLATE_AT + index * PLATE_STEP, PLATE_MS));
+        if (e <= 0) {
+            return;
+        }
+        g.setComposite(RaceGfx.alpha(e));
+        int y = y0 + (int) Math.round((1 - e) * 30 * u);
         var shape = Chamfer.slash(x, y, w, h, 12 * u);
         g.setPaint(new GradientPaint(0, y, RaceGfx.a(NfsPalette.SURFACE_HI, 0.95), 0, y + h, RaceGfx.a(NfsPalette.BG, 0.95)));
         g.fill(shape);
