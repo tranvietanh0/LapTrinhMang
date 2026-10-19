@@ -9,7 +9,6 @@ import javax.swing.JButton;
 import javax.swing.JComponent;
 import javax.swing.JPanel;
 import javax.swing.SwingUtilities;
-import javax.swing.Timer;
 import java.awt.BasicStroke;
 import java.awt.BorderLayout;
 import java.awt.Graphics;
@@ -23,11 +22,11 @@ import java.awt.image.BufferedImage;
  * button size; each pulse frame only blits it at a new alpha over the button's own rectangle.
  */
 final class RematchCard extends JPanel {
-    private static final int POP_MS = Motion.NORMAL + 60, PULSE_FRAME_MS = 40;
+    private static final int POP_MS = Motion.NORMAL + 60;
     private static final double PULSE_PERIOD_MS = 1600, GLOW_PX = 9;
 
     private final JButton primary;
-    private final Timer pulse = new Timer(PULSE_FRAME_MS, e -> repaintGlow());
+    private final Motion.Loop pulse = Motion.loop(this::repaintGlow);
     private Motion.Tween pop;
     private float popT = 1f;
     private boolean frozen;
@@ -41,7 +40,6 @@ final class RematchCard extends JPanel {
         this.primary = primary;
         setOpaque(false);
         add(card, BorderLayout.CENTER);
-        pulse.setCoalesce(true);
     }
 
     /** Pins the pop at {@code t} (0..1) and the glow at {@code pulse01} (0..1) for snapshots. */
@@ -90,7 +88,7 @@ final class RematchCard extends JPanel {
     /** Glow level 0..1: a slow sine that rests at a faint baseline, never fully off. */
     private double pulseLevel() {
         if (frozenPulse >= 0) return frozenPulse;
-        if (!pulse.isRunning()) return 0;
+        if (!pulse.running()) return 0;
         double ph = (System.currentTimeMillis() - pulseStart) / PULSE_PERIOD_MS * Math.PI * 2;
         return 0.5 - 0.5 * Math.cos(ph);
     }

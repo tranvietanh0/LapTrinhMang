@@ -9,10 +9,9 @@ import java.util.Random;
 /**
  * Night-city street backdrop for any window. The scene is cached per size (re-rendered 150 ms after
  * a resize settles); the only per-frame work is a few pre-baked speed streaks and bokeh sprites,
- * driven by ONE timer that runs only while the component is showing.
+ * driven by the shared {@link Motion} frame pulse only while the component is showing.
  */
 public class NfsBackdrop extends JPanel {
-    private static final int FRAME_MS = 33;
     private static final int STREAKS = 16, BOKEH = 9;
     private static final boolean ANIMATE = !Boolean.getBoolean("racing.noanim");
 
@@ -23,7 +22,7 @@ public class NfsBackdrop extends JPanel {
     private final float[] sx = new float[STREAKS], sy = new float[STREAKS], sl = new float[STREAKS], sv = new float[STREAKS];
     private final int[] sth = new int[STREAKS], sk = new int[STREAKS];
     private final float[] bx = new float[BOKEH], by = new float[BOKEH], bs = new float[BOKEH], bv = new float[BOKEH];
-    private final Timer ticker = new Timer(FRAME_MS, e -> tick());
+    private final Motion.Loop ticker = Motion.loop(this::tick);
     private final Timer settle = new Timer(150, e -> rerender());
     private BufferedImage scene;
     private long lastNanos;
