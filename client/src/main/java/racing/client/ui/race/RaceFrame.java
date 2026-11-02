@@ -1,5 +1,8 @@
 package racing.client.ui.race;
 
+import racing.client.audio.Audio;
+import racing.client.audio.Bgm;
+import racing.client.audio.Sfx;
 import racing.client.model.CarModel;
 import racing.client.ui.GameTheme;
 import racing.client.ui.theme.Fullscreen;
@@ -79,6 +82,7 @@ public final class RaceFrame extends JFrame {
             @Override
             public void windowClosed(WindowEvent e) {
                 tick.stop();
+                Audio.engineOff();
             }
         });
 
@@ -110,6 +114,8 @@ public final class RaceFrame extends JFrame {
         finishSent = false;
         rematchPending = false;
         phase = Phase.WAITING;
+        Audio.engineOff();
+        Audio.music(null);
         panel.setObstacles(start.obstacles());
         panel.setTitles(start.me().username(), start.opponent().username());
         panel.setStatusText("Đang chờ server đếm ngược…");
@@ -140,6 +146,8 @@ public final class RaceFrame extends JFrame {
         }
         if (value > 0) {
             phase = Phase.COUNTDOWN;
+            Audio.play(Sfx.COUNT);
+            Audio.engine(0);   // nổ máy chờ xuất phát
             panel.setStatusText("Sẵn sàng…");
             panel.setCountdownText(String.valueOf(value));
         } else {
@@ -149,6 +157,8 @@ public final class RaceFrame extends JFrame {
             lastStateNanos=lastSimulationNanos;
             panel.setStatusText("Đang đua");
             panel.setCountdownText("GO!");
+            Audio.play(Sfx.GO);
+            Audio.music(Bgm.RACE);
             new Timer(600, e -> panel.setCountdownText(null)) {{ setRepeats(false); }}.start();
             tick.start();
         }
@@ -162,12 +172,14 @@ public final class RaceFrame extends JFrame {
         double elapsed=Math.max(0,Math.min(0.1,(now-lastSimulationNanos)/1e9));
         lastSimulationNanos=now;
         myCar.advance(elapsed);
+        Audio.engine(myCar.speed() / GameConfig.MAX_SPEED);
         if(now-lastStateNanos>=GameConfig.TICK_MS*1_000_000L) {
             sender.accept(new Message(MessageType.CAR_STATE, myCar.toState()));
             lastStateNanos=now-(now-lastStateNanos)%(GameConfig.TICK_MS*1_000_000L);
         }
         if (myCar.finished() && !finishSent) {
             finishSent = true;
+            Audio.play(Sfx.FINISH);
             sender.accept(new Message(MessageType.FINISH, System.currentTimeMillis()));
         }
     }
@@ -179,12 +191,15 @@ public final class RaceFrame extends JFrame {
         panel.setRaceTick(s.tick());
         if (myCar.applyServerOwn(s.me())) {
             panel.flashMine();
+            Audio.play(Sfx.CRASH);
         }
         if (opponentCar.applyServer(s.opponent())) {
             panel.flashOpponent();
+            Audio.play(Sfx.CRASH_FAR);
         }
         if (myCar.finished() && !finishSent) {
             finishSent = true;
+            Audio.play(Sfx.FINISH);
             sender.accept(new Message(MessageType.FINISH, System.currentTimeMillis()));
         }
         panel.repaint();
@@ -193,6 +208,9 @@ public final class RaceFrame extends JFrame {
     private void onResult(MatchResult r) {
         phase = Phase.FINISHED;
         tick.stop();
+        Audio.engineOff();
+        Audio.music(null);
+        Audio.play(resultSfx(r));
         panel.setCountdownText(null);
         panel.setStatusText("Trận đấu kết thúc");
         panel.repaint();
@@ -205,7 +223,16 @@ public final class RaceFrame extends JFrame {
         }
     }
 
+    private static Sfx resultSfx(MatchResult r) {
+        return r == null || r.outcome() == null ? Sfx.DRAW : switch (r.outcome()) {
+            case WIN -> Sfx.WIN;
+            case LOSE -> Sfx.LOSE;
+            default -> Sfx.DRAW;
+        };
+    }
+
     private void onRematchAsk() {
+        Audio.play(Sfx.INVITE);
         if (resultShowing) {
             rematchPending = true;   // hỏi sau khi người chơi đóng hộp kết quả
         } else {
@@ -234,6 +261,7 @@ public final class RaceFrame extends JFrame {
                 JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
         if (choice == JOptionPane.YES_OPTION) {
             tick.stop();
+            Audio.engineOff();
             phase = Phase.FINISHED;
             sender.accept(new Message(MessageType.QUIT_MATCH, match.roomId()));
             // server sẽ trả MATCH_RESULT (thua) rồi ROOM_CLOSED; nếu không nhận được thì vẫn đóng sau 3 s
@@ -258,10 +286,10 @@ public final class RaceFrame extends JFrame {
         bindHold(root, "UP", myCar::setThrottle);
         bindHold(root, "S", myCar::setBrake);
         bindHold(root, "DOWN", myCar::setBrake);
-        bind(root, "A", myCar::laneLeft);
-        bind(root, "LEFT", myCar::laneLeft);
-        bind(root, "D", myCar::laneRight);
-        bind(root, "RIGHT", myCar::laneRight);
+        bind(root, "A", () -> changeLane(myCar::laneLeft));
+        bind(root, "LEFT", () -> changeLane(myCar::laneLeft));
+        bind(root, "D", () -> changeLane(myCar::laneRight));
+        bind(root, "RIGHT", () -> changeLane(myCar::laneRight));
         root.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW)
                 .put(KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0), "quit");
         root.getActionMap().put("quit", new AbstractAction() {
@@ -270,6 +298,14 @@ public final class RaceFrame extends JFrame {
                 confirmQuit();
             }
         });
+    }
+
+    private void changeLane(Runnable move) {
+        int before = myCar.lane();
+        move.run();
+        if (myCar.lane() != before) {
+            Audio.play(Sfx.LANE);
+        }
     }
 
     private void bind(JComponent c, String key, Runnable action) {

@@ -1,6 +1,7 @@
 package racing.client;
 
 import racing.common.GameConfig;
+import racing.client.audio.Audio;
 import racing.client.ui.GameTheme;
 
 import javax.swing.SwingUtilities;
@@ -19,7 +20,10 @@ public final class ClientMain {
         String host = args.length > 0 ? args[0] : "localhost";
         int port = args.length > 1 ? parsePort(args[1]) : GameConfig.PORT;
         GameTheme.install();
-        SwingUtilities.invokeLater(() -> new ClientApp(host, port).start());
+        SwingUtilities.invokeLater(() -> {
+            Audio.installMuteKey();
+            new ClientApp(host, port).start();
+        });
     }
 
     private static int parsePort(String s) {
