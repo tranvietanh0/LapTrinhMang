@@ -29,7 +29,7 @@ final class RaceHintBar extends JPanel {
     private static final int BASE_H = 56;
     /** keycap text, label; a keycap with a space is drawn as several caps. */
     private static final String[][] HINTS = {
-            {"W", "TĂNG TỐC"}, {"S", "PHANH"}, {"A D", "ĐỔI LÀN"}, {"F11", "TOÀN MÀN HÌNH"}, {"ESC", "THOÁT"}};
+            {"W", "TĂNG TỐC"}, {"S", "PHANH"}, {"A D", "ĐỔI LÀN"}, {"F11", "TOÀN MÀN HÌNH"}, {"M", "ÂM THANH"}, {"ESC", "THOÁT"}};
 
     private final JButton quit;
 

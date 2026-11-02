@@ -53,6 +53,8 @@ java -jar server/target/racing-server.jar --memory
 
 Chạy hai client trên cùng máy (hai cửa sổ), đăng nhập `alice` và `bob`, thách đấu, chấp nhận, đua bằng W/S/A/D hoặc phím mũi tên.
 
+Âm thanh (hiệu ứng, tiếng động cơ, nhạc nền sảnh và nhạc đua) được tổng hợp bằng code trong `client/src/main/java/racing/client/audio/`, không dùng file âm thanh ngoài. Nhấn **M** ở bất kỳ màn hình nào (trừ khi đang gõ chữ) để tắt / bật tiếng; lựa chọn được nhớ cho lần mở sau. Máy không có thiết bị âm thanh thì game chạy im lặng và in một dòng `[audio]` ra stderr.
+
 Chạy nhanh khi đang phát triển:
 
 ```

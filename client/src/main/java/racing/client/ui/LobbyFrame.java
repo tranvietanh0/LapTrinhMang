@@ -1,5 +1,8 @@
 package racing.client.ui;
 
+import racing.client.audio.Audio;
+import racing.client.audio.Bgm;
+import racing.client.audio.Sfx;
 import racing.client.ClientApp;
 import racing.client.model.ClientState;
 import racing.client.net.NetworkClient;
@@ -171,7 +174,10 @@ public final class LobbyFrame extends JFrame {
         offs.add(net.on(MessageType.INVITE_RECEIVED, m -> onInviteReceived(m.getPayload())));
         offs.add(net.on(MessageType.INVITE_RESULT, m -> onInviteResult(m.getPayload())));
         offs.add(net.on(MessageType.MATCH_START, m -> onMatchStart(m.getPayload())));
-        offs.add(net.on(MessageType.ERROR, m -> setStatus(String.valueOf(m.rawPayload()), true)));
+        offs.add(net.on(MessageType.ERROR, m -> {
+            Audio.play(Sfx.ERROR);
+            setStatus(String.valueOf(m.rawPayload()), true);
+        }));
     }
 
     private void onOnlineList(List<PlayerInfo> list) {
@@ -196,6 +202,7 @@ public final class LobbyFrame extends JFrame {
             inviteDialog.dispose();
         }
         inviteDialog = new InviteDialog(this, net, info);
+        Audio.play(Sfx.INVITE);
         inviteDialog.setVisible(true);
     }
 
@@ -208,6 +215,7 @@ public final class LobbyFrame extends JFrame {
             case BUSY -> who + " đang bận (đang thi đấu hoặc đang có lời mời khác).";
             case OFFLINE -> who + " đã thoát.";
         };
+        Audio.play(Sfx.ERROR);
         setStatus(text, true);
         refreshInviteButton();
     }
@@ -226,6 +234,8 @@ public final class LobbyFrame extends JFrame {
     }
 
     private void onRaceClosed() {
+        Audio.engineOff();
+        Audio.music(Bgm.MENU);
         setStatus("Đã về sảnh.", false);
         refreshInviteButton();
         setVisible(true);

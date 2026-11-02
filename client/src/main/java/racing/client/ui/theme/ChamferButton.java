@@ -1,5 +1,8 @@
 package racing.client.ui.theme;
 
+import racing.client.audio.Audio;
+import racing.client.audio.Sfx;
+
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.MouseAdapter;
@@ -37,10 +40,14 @@ public final class ChamferButton extends JButton {
         setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         Responsive.font(this, NfsFonts.tracked(NfsFonts.display(19f), 0.04f));
         addMouseListener(new MouseAdapter() {
-            @Override public void mouseEntered(MouseEvent e) { hoverTo(isEnabled() ? 1f : 0f); }
+            @Override public void mouseEntered(MouseEvent e) {
+                hoverTo(isEnabled() ? 1f : 0f);
+                if (isEnabled()) Audio.play(Sfx.HOVER);
+            }
             @Override public void mouseExited(MouseEvent e) { hoverTo(0f); }
         });
         getModel().addChangeListener(e -> repaint());
+        addActionListener(e -> Audio.play(Sfx.CLICK));
     }
 
     @Override

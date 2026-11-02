@@ -1,5 +1,7 @@
 package racing.client;
 
+import racing.client.audio.Audio;
+import racing.client.audio.Bgm;
 import racing.client.model.ClientState;
 import racing.client.net.NetworkClient;
 import racing.client.ui.LobbyFrame;
@@ -95,6 +97,8 @@ public final class ClientApp {
     }
 
     private void showLogin(String prefillUsername) {
+        Audio.engineOff();
+        Audio.music(Bgm.MENU);
         LoginFrame f = new LoginFrame(this, defaultHost, defaultPort);
         if (prefillUsername != null) {
             f.setUsername(prefillUsername);
