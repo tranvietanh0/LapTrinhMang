@@ -77,7 +77,7 @@ public final class LeaderboardFrame extends JFrame {
         GameTheme.decorate(this);
         ScreenFrame.fit(this, 1120, 800);
         ScreenFrame.install(this, root, new Dimension(860, 580));
-        setLocationRelativeTo(null);
+        ScreenFrame.center(this, null);
 
         off = net.on(MessageType.LEADERBOARD, m -> {
             List<RankRow> rows = m.getPayload();

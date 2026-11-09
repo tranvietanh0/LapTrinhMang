@@ -12,7 +12,7 @@ import java.awt.event.ComponentEvent;
  */
 public final class Responsive {
     public static final double DESIGN_W = 1280, DESIGN_H = 800;
-    public static final float MIN_SCALE = 0.8f, MAX_SCALE = 1.8f;
+    public static final float MIN_SCALE = 0.6f, MAX_SCALE = 1.8f;
     private static final String SCALE = "nfs.scale", FONT = "nfs.font", HEIGHT = "nfs.h", ROW = "nfs.rowH";
 
     private Responsive() { }

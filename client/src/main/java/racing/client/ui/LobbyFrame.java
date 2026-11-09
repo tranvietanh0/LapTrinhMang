@@ -143,7 +143,7 @@ public final class LobbyFrame extends JFrame {
         NfsBackdrop root=new NfsBackdrop();
         root.setLayout(new BorderLayout()); root.add(shell,BorderLayout.CENTER);
         GameTheme.decorate(this);
-        ScreenFrame.fit(this,1280,800); ScreenFrame.install(this,root,new Dimension(900,600)); setLocationRelativeTo(null);
+        ScreenFrame.fit(this,1280,800); ScreenFrame.install(this,root,new Dimension(900,600)); ScreenFrame.center(this,null);
 
         inviteButton.addActionListener(e -> invite());
         leaderboard.addActionListener(e -> new LeaderboardFrame(net).setVisible(true));

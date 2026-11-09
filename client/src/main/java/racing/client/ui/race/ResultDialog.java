@@ -5,6 +5,7 @@ import racing.common.dto.MatchOutcome;
 import racing.common.dto.MatchResult;
 
 import racing.client.ui.theme.Responsive;
+import racing.client.ui.theme.ScreenFrame;
 
 import javax.swing.AbstractAction;
 import javax.swing.JComponent;
@@ -51,7 +52,7 @@ public final class ResultDialog {
             }
         });
         dlg.pack();
-        dlg.setLocationRelativeTo(owner);
+        ScreenFrame.center(dlg, owner);
         return dlg;
     }
 

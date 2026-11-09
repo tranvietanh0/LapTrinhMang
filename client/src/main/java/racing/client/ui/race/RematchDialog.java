@@ -35,7 +35,6 @@ public final class RematchDialog {
 
     /** Dựng hộp thoại chưa hiển thị; {@code agreed[0]} thành true khi bấm Đồng ý. Đóng cửa sổ / Esc = từ chối. */
     public static JDialog create(Window owner, String opponent, boolean[] agreed) {
-        float scale = owner != null ? Responsive.scaleOf(owner) : 1f;
         JDialog dlg = new JDialog(owner, "Thi đấu tiếp", Dialog.ModalityType.APPLICATION_MODAL);
         JButton yes = GameTheme.button("ĐỒNG Ý  »", true);
         JButton no = GameTheme.button("Từ chối", false);
@@ -62,9 +61,7 @@ public final class RematchDialog {
         root.add(animated);
         root.setLayout(new HeroCardLayout(null, animated, 460, 0, 24));
         GameTheme.decorate(dlg);
-        ScreenFrame.fit(dlg, Math.round(620 * scale), Math.round(520 * scale));
         ScreenFrame.install(dlg, root, owner);
-        dlg.setMinimumSize(new Dimension(420, 380));
         dlg.getRootPane().setDefaultButton(yes);
         yes.addActionListener(e -> {
             agreed[0] = true;
@@ -79,9 +76,7 @@ public final class RematchDialog {
                 dlg.dispose();
             }
         });
-        dlg.validate();
-        dlg.setSize(dlg.getWidth(), Math.min(dlg.getHeight(), card.getPreferredSize().height + Math.round(48 * Responsive.scaleOf(dlg))));
-        dlg.setLocationRelativeTo(owner);
+        ScreenFrame.fitCard(dlg, root, animated, 606, 24, owner);
         return dlg;
     }
 }

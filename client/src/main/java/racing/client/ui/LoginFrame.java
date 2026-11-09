@@ -57,7 +57,7 @@ public final class LoginFrame extends JFrame {
         NfsBackdrop root=new NfsBackdrop();
         root.setLayout(new BorderLayout()); root.add(stage,BorderLayout.CENTER);
         GameTheme.decorate(this);
-        ScreenFrame.fit(this,1280,800); ScreenFrame.install(this,root,new Dimension(900,600)); setLocationRelativeTo(null);
+        ScreenFrame.fit(this,1280,800); ScreenFrame.install(this,root,new Dimension(900,600)); ScreenFrame.center(this,null);
         getRootPane().setDefaultButton(loginButton);
         loginButton.addActionListener(e->login()); registerButton.addActionListener(e->register());
         addWindowListener(new WindowAdapter() { public void windowClosed(WindowEvent e) { unregister(); } });

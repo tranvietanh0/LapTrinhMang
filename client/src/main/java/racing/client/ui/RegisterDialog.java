@@ -64,9 +64,7 @@ public final class RegisterDialog extends JDialog {
         NfsBackdrop root = new NfsBackdrop();
         root.setLayout(new BorderLayout()); root.add(stage,BorderLayout.CENTER);
         GameTheme.decorate(this);
-        ScreenFrame.fit(this,Math.round(620*Responsive.scaleOf(owner)),Math.round(880*Responsive.scaleOf(owner)));
         ScreenFrame.install(this,root,owner);
-        setMinimumSize(new Dimension(420,420));
         getRootPane().setDefaultButton(okButton);
         okButton.addActionListener(e -> submit());
         cancel.addActionListener(e -> dispose());
@@ -76,9 +74,7 @@ public final class RegisterDialog extends JDialog {
                 unregister();
             }
         });
-        validate();
-        setSize(getWidth(),Math.min(getHeight(),card.getPreferredSize().height+Math.round(48*Responsive.scaleOf(this))));
-        setLocationRelativeTo(owner);
+        ScreenFrame.fitCard(this,root,card,606,24,owner);
         // entrance: card rises, form lines follow one by one; idle light sweep on the CTA
         stage.reveal(0,0,card);
         form.reveal(140,RevealPanel.STAGGER);

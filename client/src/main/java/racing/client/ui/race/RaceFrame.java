@@ -92,9 +92,9 @@ public final class RaceFrame extends JFrame {
         content.add(new RaceHintBar(this::confirmQuit), BorderLayout.SOUTH);
         setContentPane(content);
         bindKeys();
-        setMinimumSize(new Dimension(1024, 640));
+        ScreenFrame.minimumSize(this, new Dimension(1024, 640));
         ScreenFrame.fit(this, 1280, 830);
-        setLocationRelativeTo(null);
+        ScreenFrame.center(this, null);
         GameTheme.decorate(this);
         Responsive.attach(this, getRootPane());
         Fullscreen.bind(this);
