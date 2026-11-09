@@ -68,7 +68,6 @@ public final class InviteDialog extends JDialog {
         col.reveal(140, 30);
         GameTheme.decorate(this);
         float scale = Responsive.scaleOf(owner);
-        ScreenFrame.fit(this, Math.round(660 * scale), Math.round(760 * scale));
         ScreenFrame.install(this, root, owner);
         setMinimumSize(new Dimension(420, 420));
         accept.addActionListener(e -> reply(true));
@@ -89,8 +88,11 @@ public final class InviteDialog extends JDialog {
         timer = new Timer(250, e -> tick());
         tick();
         timer.start();
-        validate();
-        setSize(getWidth(), Math.min(getHeight(), card.getPreferredSize().height + Math.round(48 * Responsive.scaleOf(this))));
+        // size the CONTENT to the card plus its margins; pack() adds the title bar and borders on top
+        int margins = 2 * Math.round(24 * scale);
+        root.setPreferredSize(new Dimension(Math.round(646 * scale), card.getPreferredSize().height + margins));
+        pack();
+        ScreenFrame.fit(this, getWidth(), getHeight());
         setLocationRelativeTo(owner);
     }
 
