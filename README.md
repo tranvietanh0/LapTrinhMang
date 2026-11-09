@@ -3,6 +3,7 @@
 Bài tập lớn môn Lập trình mạng, lớp LTM-2026-2-N01. Client Java Swing, server TCP Socket, dữ liệu MySQL.
 
 - Báo cáo thiết kế: [`report/LTM_Nhom_GameDuaXe_Java.docx`](report/)
+- Tài liệu thuyết trình theo giáo trình Lập trình mạng: [`README_BAO_CAO.md`](README_BAO_CAO.md)
 - Kế hoạch chia việc: [`PLAN.md`](PLAN.md)
 
 ## Cấu trúc
@@ -44,6 +45,144 @@ Bản setup Windows trên máy hiện tại: [cách chạy/tắt và vị trí d
 java -jar server/target/racing-server.jar            # cổng 5000, dùng MySQL theo db.properties
 java -jar client/target/racing-client.jar            # hoặc: racing-client.jar <host> <port>
 ```
+
+## Chạy trên 2 máy Windows cùng mạng LAN
+
+Mô hình đúng là **một máy chạy server + MySQL**, máy còn lại chỉ chạy client.
+Không chạy MySQL và không chạy `server.jar` trên máy client.
+
+### Máy A: máy chủ
+
+1. Cài JDK 17 trở lên, sau đó kiểm tra:
+
+   ```powershell
+   java -version
+   ```
+
+2. Lấy mã nguồn về máy A, mở PowerShell tại thư mục gốc dự án và build:
+
+   ```powershell
+   mvnw.cmd package
+   ```
+
+   Nếu không muốn cài Maven, dùng `mvnw.cmd` đã có sẵn trong project. Nếu chỉ
+   chép bản đóng gói, chép cả `server\target\racing-server.jar` và thư mục cấu
+   hình/DB cần thiết.
+
+3. Chạy MySQL bằng Docker Desktop (khuyến nghị):
+
+   ```powershell
+   docker compose up -d
+   docker compose ps
+   ```
+
+   Docker sẽ tạo database `racing`, user `racing`, mật khẩu `racing` và nạp
+   `schema.sql`/`seed.sql` ở lần tạo volume đầu tiên. Nếu đã có volume cũ,
+   script seed không chạy lại; dùng `db\reset-db.sql` khi chỉ cần xóa lịch sử
+   và đưa điểm về 0.
+
+4. Tạo cấu hình DB ở **thư mục hiện tại khi chạy server**:
+
+   ```powershell
+   Copy-Item server\src\main\resources\db.properties.example db.properties
+   ```
+
+   Với Docker, nội dung tối thiểu là:
+
+   ```properties
+   db.url=jdbc:mysql://127.0.0.1:3306/racing?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Ho_Chi_Minh
+   db.user=racing
+   db.password=racing
+   ```
+
+   Không commit hoặc gửi file `db.properties`.
+
+5. Tìm địa chỉ IPv4 của máy A trong mạng LAN:
+
+   ```powershell
+   ipconfig
+   ```
+
+   Lấy dòng `IPv4 Address`, ví dụ `192.168.1.25`. Không dùng `127.0.0.1` cho
+   máy B; địa chỉ đó chỉ trỏ về chính máy đang chạy client.
+
+6. Mở TCP port 5000 trên Windows Firewall của máy A. Mở PowerShell bằng
+   quyền Administrator và chạy một lần:
+
+   ```powershell
+   New-NetFirewallRule -DisplayName "Racing Game TCP 5000" -Direction Inbound -Protocol TCP -LocalPort 5000 -Action Allow
+   ```
+
+7. Khởi động server:
+
+   ```powershell
+   java -jar server\target\racing-server.jar
+   ```
+
+   Khi thành công phải thấy log server lắng nghe cổng `5000`. Kiểm tra cổng:
+
+   ```powershell
+   Get-NetTCPConnection -LocalPort 5000 -State Listen
+   ```
+
+   Chỉ mở port `5000` cho game. Máy B không cần truy cập port MySQL `3306`.
+
+### Máy B: máy khách
+
+1. Cài JDK 17 trở lên.
+2. Chép `client\target\racing-client.jar` từ máy A sang máy B, hoặc chép cả
+   project rồi build trên máy B. Máy B không cần Maven, MySQL, Docker hay
+   `db.properties`.
+3. Kiểm tra kết nối tới máy A trước khi mở game, thay IP bằng IP thật của máy A:
+
+   ```powershell
+   Test-NetConnection 192.168.1.25 -Port 5000
+   ```
+
+   Kết quả cần có `TcpTestSucceeded : True`. Nếu `False`, kiểm tra hai máy có
+   cùng mạng không, IP có đúng không, server đã chạy chưa và firewall máy A.
+4. Chạy client, truyền IP máy A và port:
+
+   ```powershell
+   java -jar client\target\racing-client.jar 192.168.1.25 5000
+   ```
+
+   Hoặc chạy không truyền tham số rồi nhập `192.168.1.25:5000` vào ô
+   `SERVER / HOST:PORT` trên màn hình đăng nhập.
+5. Máy A cũng có thể chạy client thứ nhất:
+
+   ```powershell
+   java -jar client\target\racing-client.jar 127.0.0.1 5000
+   ```
+
+   Đăng nhập hai client bằng hai tài khoản khác nhau, ví dụ `alice` và `bob`,
+   sau đó thách đấu.
+
+### Nếu không có Docker/MySQL: demo nhanh
+
+Trên máy A chỉ cần JDK 17 và chạy:
+
+```powershell
+java -jar server\target\racing-server.jar --memory
+```
+
+Sau đó máy B vẫn kết nối tới `IP_MAY_A:5000` như bình thường. Dữ liệu tài khoản
+mẫu (`alice`, `bob`, ...) có mật khẩu `123456`, nhưng điểm và lịch sử sẽ mất khi
+server tắt. Cách này phù hợp để kiểm tra mạng và demo gameplay, không phù hợp
+để lưu kết quả báo cáo.
+
+### Lỗi thường gặp
+
+| Hiện tượng | Cách xử lý |
+|---|---|
+| `Connection refused` | Server chưa chạy, sai port, hoặc đang dùng nhầm `localhost`. |
+| `TcpTestSucceeded : False` | Mở firewall TCP 5000, kiểm tra IP LAN và cùng mạng. |
+| Server báo không tìm thấy DB config | Tạo `db.properties` trong thư mục mà PowerShell đang đứng khi chạy server. |
+| Client báo mất kết nối sau khi server chạy | Kiểm tra server có bị lỗi MySQL không; xem log ngay tại terminal server. |
+| Cổng 5000 đã được sử dụng | Đóng server cũ hoặc chạy server port khác, ví dụ `java -jar server\target\racing-server.jar 5001`, rồi cho client dùng port đó. |
+
+Không mở port 3306 ra Internet và không đưa mật khẩu MySQL vào Git. Chỉ client
+kết nối tới TCP 5000 của game server; server mới kết nối tới MySQL trên máy A.
 
 Server nhận tham số `[port]` và `--memory`. `--memory` chạy không cần MySQL: dữ liệu nằm trong bộ nhớ với 6 tài khoản mẫu, mất hết khi tắt server; chỉ dùng để thử nhanh hoặc demo khi chưa cài MySQL.
 
