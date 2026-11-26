@@ -5,7 +5,7 @@ Nhóm 4 người, 4 tuần, từ **thứ Hai 29/09/2026** đến **Chủ nhật 
 | Thành viên | Vai trò | Luồng việc | Mã task |
 |---|---|---|---|
 | Phạm Thị Thu Phương | Server | Kết nối, phiên, lời mời, phòng đua, trọng tài | S1–S7 |
-| Vũ Văn Hiếu | Client sảnh | Mạng phía client, đăng nhập, sảnh, lời mời | C1–C7 |
+| Vũ Quốc Hiếu | Client sảnh | Mạng phía client, đăng nhập, sảnh, lời mời | C1–C7 |
 | Nguyễn Trần Mai Anh | Dữ liệu (SQL) | Cài MySQL, bảng xếp hạng, đăng ký tài khoản, lịch sử trận, ghi sự kiện, kiểm tra SQL | M1–M6 |
 | Trần Việt Anh | Nền tảng + client đua | Maven, `common`, schema, DAO (đã xong), màn hình đua, kiểm thử tích hợp, đóng gói | D1–D7, R1–R6 |
 
@@ -104,7 +104,7 @@ Sau khi đóng băng, muốn đổi phải báo cả nhóm trên Zalo và cập 
 | S6 | 3 | Mất kết nối: `setSoTimeout(15000)`, xử lý `IOException` ở mọi trạng thái (trong sảnh, đang mời, đang đua), dọn phòng, cập nhật online | `ClientHandler`, `SessionManager`, `RoomManager` | Rút mạng client đang đua: sau ≤ 15 s đối thủ nhận thắng, DB ghi DISCONNECT | 4 | S5 |
 | S7 | 4 | Chịu tải và đồng thời: 4 client, 2 phòng chạy song song; rà `synchronized`, `ConcurrentHashMap`; sửa lỗi từ kiểm thử tích hợp | toàn bộ server | 2 phòng đua cùng lúc không lẫn dữ liệu; không deadlock sau 10 trận liên tiếp | 4 | S6 |
 
-### 3.2. Vũ Văn Hiếu – Client: mạng, đăng nhập, sảnh
+### 3.2. Vũ Quốc Hiếu – Client: mạng, đăng nhập, sảnh
 
 | Mã | Tuần | Việc | File / lớp | Tiêu chí hoàn thành | Giờ | Phụ thuộc |
 |---|---|---|---|---|---|---|

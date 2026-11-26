@@ -1,220 +1,344 @@
 """Báo cáo cá nhân: Phạm Thị Thu Phương – Server (S1–S7)."""
-from source import lines_of, method
-
-SRV = "server/src/main/java/racing/server/"
 
 CONTENT = {
     "name": "Phạm Thị Thu Phương",
     "slug": "PhamThiThuPhuong",
-    "role": "Server – kết nối, phiên, lời mời, phòng đua, trọng tài (S1–S7)",
-    "intro": (
-        "Trong nhóm, Phạm Thị Thu Phương phụ trách toàn bộ phía server: nhận kết nối TCP, quản lý phiên đăng nhập, "
-        "chuyển lời mời thách đấu, tạo và điều khiển phòng đua, làm trọng tài tính quãng đường – va chạm – người "
-        "thắng, xử lý thoát trận và mất kết nối, bảo đảm nhiều phòng chạy song song không lẫn dữ liệu. Server là "
-        "trung tâm của hệ thống: mọi thông điệp từ client đều đi qua phần việc này trước khi tới cơ sở dữ liệu "
-        "hoặc tới người chơi còn lại."),
+    "part_intro": [
+        "Trong nhóm, em phụ trách toàn bộ phía server (task S1–S7). Server nhận kết nối TCP từ các client, quản lý "
+        "phiên đăng nhập và danh sách người chơi đang online, chuyển lời mời thách đấu, tạo và điều khiển các phòng "
+        "đua, làm trọng tài tính quãng đường, va chạm và người thắng, xử lý thoát trận và mất kết nối, rồi ghi kết "
+        "quả xuống cơ sở dữ liệu MySQL.",
+        "Mọi thông điệp từ client đều đi qua phần việc này trước khi tới CSDL hoặc tới người chơi còn lại. Vì vậy em "
+        "chịu trách nhiệm chính về tính đúng đắn của luật chơi và sự ổn định khi nhiều phòng chạy song song.",
+    ],
     "tasks": [
-        ["S1", "Khung server: mở ServerSocket cổng 5000, pool luồng, ClientHandler với vòng readObject, gửi tin "
-               "không chặn, log ra console", "GameServer, net/ClientHandler",
-         "Nhiều client kết nối cùng lúc, PING nhận PONG; một client đóng không làm server dừng"],
-        ["S2", "SessionManager: đăng nhập qua PlayerRepository, danh sách online, trạng thái FREE / IN_MATCH, phát "
-               "ONLINE_LIST, đăng xuất", "core/SessionManager, core/Session",
-         "Chống đăng nhập trùng; danh sách online cập nhật ngay khi có người vào / ra"],
-        ["S3", "InviteManager: INVITE → INVITE_RECEIVED, INVITE_REPLY, hết hạn 30 s, trả BUSY / OFFLINE / "
-               "REJECTED / TIMEOUT", "core/InviteManager",
-         "Mời người đang đấu nhận BUSY; không trả lời 30 s nhận TIMEOUT"],
-        ["S4", "Room + RoomManager + CarSim: tạo phòng, sinh 48 xe cộ theo seed, MATCH_START, đếm ngược 3-2-1-0, "
-               "tick 50 ms, cắt ngưỡng tốc độ, xét va chạm, phát RACE_UPDATE",
-         "core/Room, RoomManager, CarSim, ObstacleGenerator",
-         "Gửi tốc độ 999 bị cắt về 360; đâm xe cộ choáng 1,5 s"],
-        ["S5", "MatchService: về đích, hòa cùng tick, thoát, mất kết nối; lưu kết quả; MATCH_RESULT; rematch",
-         "core/MatchService, Room.endRound", "Điểm trong DB đúng mọi tình huống; rematch tạo ván mới"],
-        ["S6", "Mất kết nối: SO_TIMEOUT 15 s, xử lý IOException ở mọi trạng thái, dọn phòng, cập nhật online",
-         "ClientHandler, SessionManager, RoomManager", "Rút mạng khi đua: ≤ 15 s đối thủ thắng, DB ghi DISCONNECT"],
-        ["S7", "Đồng thời và chịu tải: hàng đợi gửi riêng mỗi client, synchronized theo phòng, nhiều phòng song "
-               "song", "toàn bộ server", "2 phòng đua cùng lúc không lẫn dữ liệu, không deadlock"],
+        ["S1", "Khung server: mở ServerSocket cổng 5000, luồng acceptor và pool luồng, ClientHandler đọc thông điệp "
+               "bằng readObject, gửi tin không chặn",
+         "GameServer, net/ClientHandler"],
+        ["S2", "Quản lý phiên: đăng nhập, chống đăng nhập trùng, danh sách online, trạng thái Rảnh / Đang đấu, phát "
+               "ONLINE_LIST",
+         "core/SessionManager, core/Session"],
+        ["S3", "Lời mời thách đấu: INVITE, INVITE_RECEIVED, INVITE_REPLY, kết quả OFFLINE / BUSY / REJECTED / TIMEOUT, "
+               "hạn 30 giây",
+         "core/InviteManager"],
+        ["S4", "Phòng đua và trọng tài: tạo phòng, đếm ngược 3-2-1, tick 50 ms, RACE_UPDATE; CarSim tính quãng đường "
+               "và va chạm",
+         "core/Room, core/RoomManager, core/CarSim, core/ObstacleGenerator"],
+        ["S5", "Kết thúc ván: xác định thắng / thua / hòa, MATCH_RESULT, thi đấu tiếp (REMATCH), đóng phòng",
+         "core/Room (endRound), core/MatchService"],
+        ["S6", "Thoát trận và mất kết nối: QUIT_MATCH, SO_TIMEOUT 15 s, dọn phòng, lời mời và phiên theo đúng thứ tự",
+         "net/ClientHandler, core/RoomManager"],
+        ["S7", "Đồng thời: hàng đợi gửi riêng cho mỗi client, khóa theo phòng, ghi diễn biến trận ngoài luồng tick",
+         "toàn bộ phần server"],
     ],
-    "files": [
-        (SRV + "GameServer.java", "Mở cổng, vòng accept, scheduler tick 50 ms và quét hết hạn 1 s"),
-        (SRV + "net/ClientHandler.java", "Một kết nối TCP: luồng đọc, luồng ghi, phân loại thông điệp"),
-        (SRV + "core/SessionManager.java", "Đăng nhập, danh sách online, trạng thái người chơi"),
-        (SRV + "core/Session.java", "Phiên của một người chơi đã đăng nhập"),
-        (SRV + "core/InviteManager.java", "Lời mời thách đấu và hẹn giờ 30 s"),
-        (SRV + "core/RoomManager.java", "Tạo / đóng phòng, tick tất cả phòng, định tuyến thông điệp trận"),
-        (SRV + "core/Room.java", "Máy trạng thái phòng đua, kết thúc ván, rematch"),
-        (SRV + "core/CarSim.java", "Mô phỏng xe phía server (trọng tài)"),
-        (SRV + "core/ObstacleGenerator.java", "Sinh dòng xe cộ theo seed, giống nhau cho hai người"),
-        (SRV + "core/MatchService.java", "Tạo trận, chốt kết quả, ghi sự kiện"),
+    "part_analysis": [
+        "Phần server có ba yêu cầu khó. Thứ nhất, luật chơi phải do server quyết định để không ai gian lận được bằng "
+        "cách sửa client (YC06). Thứ hai, các thao tác trên cùng một phòng phải tuần tự, còn các phòng khác nhau phải "
+        "độc lập (YC10). Thứ ba, phải phát hiện mất kết nối trong thời gian ngắn mà không làm đơ luồng tick (YC11). "
+        "Mỗi yêu cầu được hiện thực bằng một cơ chế cụ thể, trình bày ở mục 2.2.",
+        "Các chức năng nghiệp vụ còn lại (đăng nhập, lời mời, thi đấu tiếp, ghi kết quả) được đặc tả bằng use case và "
+        "biểu đồ tuần tự ở mục 2.2. Lõi nghiệp vụ không phụ thuộc socket nên có thể kiểm thử bằng JUnit với đồng hồ "
+        "giả, không cần mở mạng.",
     ],
-    "details_intro": (
-        "Phần này trình bày cách hiện thực từng task, kèm đoạn mã trích trực tiếp từ mã nguồn hiện tại của repo và "
-        "giải thích các quyết định thiết kế. Thứ tự đi theo đường đi của một thông điệp: từ lúc client kết nối, "
-        "đăng nhập, mời nhau, vào phòng đua cho tới khi trận kết thúc hoặc một bên rớt mạng."),
-    "sections": [
-        ("3.1. Khung server và vòng nhận kết nối (S1)", [
-            ("p", "GameServer mở một ServerSocket duy nhất ở cổng 5000. Luồng acceptor chạy vòng accept(): mỗi "
-                  "socket mới được bọc trong một ClientHandler và giao cho pool luồng, nên server phục vụ nhiều "
-                  "client cùng lúc mà không client nào chặn client khác. Cùng lúc đó một ScheduledExecutorService "
-                  "chạy hai công việc định kỳ: tick tất cả phòng đua mỗi 50 ms và quét lời mời / rematch hết hạn mỗi "
-                  "giây."),
-            ("code", method(SRV + "GameServer.java", r"public void start\(\)"), "GameServer.start()"),
-            ("code", method(SRV + "GameServer.java", r"private void acceptLoop\(\)"), "GameServer.acceptLoop()"),
-            ("p", "Server có hai chế độ khởi động: mặc định dùng MySQL (withMysql) và --memory dùng kho dữ liệu "
-                  "trong bộ nhớ với 6 tài khoản mẫu, để demo được khi máy chưa cài MySQL. Hai chế độ dùng chung "
-                  "toàn bộ phần lõi vì lõi chỉ phụ thuộc giao diện PlayerRepository / MatchRepository."),
-            ("fig", "fig3_server.png", "Các thành phần phía server", 14.5),
-        ]),
-        ("3.2. ClientHandler: tách luồng đọc và luồng ghi (S1, S6, S7)", [
-            ("p", "Mỗi kết nối có một ClientHandler. Hàm khởi tạo đặt SO_TIMEOUT 15 giây (client gửi PING mỗi 5 "
-                  "giây nên 15 giây im lặng nghĩa là đã rớt), bật TCP_NODELAY để gói nhỏ như CAR_STATE đi ngay, và "
-                  "tạo ObjectOutputStream trước ObjectInputStream rồi flush để hai phía không chờ header của nhau."),
-            ("code", method(SRV + "net/ClientHandler.java", r"public void run\(\)"), "ClientHandler.run() – luồng đọc"),
-            ("p", "Các nhánh catch phân biệt rõ ba kiểu kết thúc: quá 15 giây không có dữ liệu "
-                  "(SocketTimeoutException), client tự đóng (EOFException) và lỗi mạng khác. Dù kết thúc kiểu nào, "
-                  "khối finally luôn gọi cleanup() để dọn phòng, lời mời và phiên."),
-            ("p", "Gửi tin được tách sang luồng ghi riêng qua một hàng đợi BlockingQueue 256 phần tử. Lý do: luồng "
-                  "tick của phòng gửi RACE_UPDATE cho cả hai người; nếu ghi thẳng vào socket thì một client bị treo "
-                  "(không đọc) sẽ làm writeObject chặn và đứng cả phòng. Với hàng đợi, send() không bao giờ chặn; "
-                  "hàng đợi đầy nghĩa là client không theo kịp và bị ngắt kết nối."),
-            ("code", method(SRV + "net/ClientHandler.java", r"public void send\(Message"), "ClientHandler.send()"),
-            ("code", method(SRV + "net/ClientHandler.java", r"private void writeLoop\(\)"),
-             "ClientHandler.writeLoop() – luồng ghi"),
-            ("p", "out.reset() sau mỗi lần ghi là bắt buộc: ObjectOutputStream nhớ các đối tượng đã gửi và lần sau "
-                  "chỉ gửi tham chiếu, nên nếu không reset thì client sẽ nhận lại trạng thái cũ dù server đã cập nhật."),
-        ]),
-        ("3.3. Phân loại thông điệp theo trạng thái đăng nhập", [
-            ("p", "dispatch() xử lý các thông điệp không cần đăng nhập (PING, LOGIN, REGISTER, LOGOUT). Mọi loại "
-                  "khác chỉ được chuyển cho dịch vụ tương ứng khi đã có phiên; chưa đăng nhập thì trả ERROR. Nhờ vậy "
-                  "client chưa xác thực không thể mời, đua hay đọc lịch sử."),
-            ("code", method(SRV + "net/ClientHandler.java", r"private void dispatchLoggedIn\("),
-             "ClientHandler.dispatchLoggedIn()"),
-            ("table", ["Thông điệp", "Dịch vụ xử lý", "Ghi chú"], [
-                ["INVITE, INVITE_REPLY", "InviteManager", "Kiểm tra bận / offline, hẹn giờ 30 s"],
-                ["CAR_STATE, FINISH", "RoomManager → Room → CarSim", "Chỉ nhận làn và tốc độ, server tự tính quãng đường"],
-                ["QUIT_MATCH, REMATCH_REPLY", "RoomManager → Room", "Kết thúc ván / tạo ván mới"],
-                ["LEADERBOARD_REQ, MATCH_HISTORY_REQ", "AccountService", "Truy vấn DB, lỗi SQL trả ERROR"],
-            ], [5.0, 5.0, 6.0], "Định tuyến thông điệp sau khi đăng nhập"),
-        ]),
-        ("3.4. Quản lý phiên đăng nhập (S2)", [
-            ("p", "SessionManager giữ map online (ConcurrentHashMap tên → Session). Hàm login() được đánh dấu "
-                  "synchronized để hai máy đăng nhập cùng tài khoản cùng lúc không thể cùng lọt qua bước kiểm tra "
-                  "trùng. Sau khi thêm phiên, server phát ONLINE_LIST cho mọi người."),
-            ("code", method(SRV + "core/SessionManager.java", r"public synchronized LoginResult login\("),
-             "SessionManager.login()"),
-            ("p", "Khi kiểm thử phát hiện người đăng nhập sau cùng thấy sảnh trống: ONLINE_LIST phát trong login() "
-                  "tới client trước LOGIN_RESULT, lúc client chưa mở sảnh nên bị bỏ qua. Cách sửa là gửi lại "
-                  "ONLINE_LIST riêng cho người đó ngay sau LOGIN_RESULT (ClientHandler.login)."),
-        ]),
-        ("3.5. Lời mời thách đấu (S3)", [
-            ("p", "InviteManager lưu lời mời đang chờ theo id và theo tên người chơi (byUser) để biết ai đang bận "
-                  "với một lời mời. Mọi hàm public đều synchronized vì lời mời được đọc / ghi từ nhiều luồng: luồng "
-                  "của người mời, luồng của người được mời và luồng scheduler quét hết hạn."),
-            ("code", method(SRV + "core/InviteManager.java", r"public synchronized void invite\(", 36),
-             "InviteManager.invite()"),
-            ("table", ["Trạng thái", "Khi nào", "Người mời nhận"], [
-                ["OFFLINE", "Người được mời không online hoặc thoát giữa chừng", "INVITE_RESULT OFFLINE"],
-                ["BUSY", "Người được mời đang đấu hoặc đang có lời mời khác", "INVITE_RESULT BUSY"],
-                ["REJECTED", "Người được mời bấm Từ chối", "INVITE_RESULT REJECTED"],
-                ["TIMEOUT", "Quá 30 giây không trả lời (sweep() mỗi giây)", "INVITE_RESULT TIMEOUT"],
-                ["Chấp nhận", "Người được mời bấm Chấp nhận", "MATCH_START (tạo phòng)"],
-            ], [2.6, 8.4, 5.0], "Các kết quả của một lời mời"),
-            ("code", method(SRV + "core/InviteManager.java", r"public synchronized void sweep\(\)"),
-             "InviteManager.sweep() – báo hết hạn"),
-        ]),
-        ("3.6. Phòng đua và máy trạng thái (S4)", [
-            ("p", "Room là máy trạng thái WAITING → COUNTDOWN → RACING → AWAIT_REMATCH → CLOSED. Mọi hàm public "
-                  "của Room đều synchronized nên các thao tác trong một phòng được tuần tự hóa, nhưng các phòng khác "
-                  "nhau chạy độc lập. startRound() tạo bản ghi trận, sinh dòng xe cộ theo seed (cả hai người thấy "
-                  "giống hệt nhau) và gửi MATCH_START cho từng người với góc nhìn riêng (me / opponent)."),
-            ("fig", "fig7_states.png", "Máy trạng thái của phòng đua", 14.0),
-            ("code", method(SRV + "core/Room.java", r"public synchronized void tick\(\)"), "Room.tick() – một tick trọng tài"),
-            ("p", "Mỗi tick 50 ms, server tiến cả hai xe, ghi sự kiện va chạm, gửi RACE_UPDATE cho từng người rồi "
-                  "xét về đích. Luật hòa được chốt ở server: hai xe về đích trong cùng một tick là hòa; chỉ một xe về "
-                  "đích thì người đó thắng. Client gửi FINISH chỉ mang tính gợi ý."),
-        ]),
-        ("3.7. CarSim – trọng tài chống gian lận (S4)", [
-            ("p", "Điểm mấu chốt về an toàn: client chỉ được chọn làn và tốc độ, mọi giá trị đều bị cắt về khoảng "
-                  "hợp lệ; quãng đường client gửi lên bị bỏ qua hoàn toàn. Server tự tích phân quãng đường từ tốc "
-                  "độ đã cắt, nên một client sửa đổi gửi tốc độ 999 km/h vẫn chỉ chạy tối đa 360 km/h."),
-            ("code", method(SRV + "core/CarSim.java", r"public void applyClient\("), "CarSim.applyClient()"),
-            ("code", method(SRV + "core/CarSim.java", r"public Obstacle advance\("), "CarSim.advance()"),
-            ("p", "Va chạm được xét theo vị trí xe cộ đã di chuyển tới tick hiện tại (positionAt(tick)), vì xe cộ "
-                  "chạy cùng chiều với tốc độ 110 / 160 / 210 km/h. Mỗi xe cộ chỉ tính va chạm một lần; khi đâm, "
-                  "tốc độ về 0 và bị choáng 1,5 giây, trong thời gian này CAR_STATE của client không có tác dụng."),
-        ]),
-        ("3.8. Kết thúc ván, lưu kết quả và thi đấu tiếp (S5)", [
-            ("p", "endRound() là điểm kết thúc chung cho mọi lý do (FINISH, DRAW, QUIT, DISCONNECT): lưu kết quả "
-                  "qua MatchService, gửi MATCH_RESULT theo góc nhìn từng người (WIN / LOSE / DRAW) kèm điểm mới, "
-                  "rồi hỏi REMATCH_ASK. Hai bên cùng đồng ý thì startRound() tạo ván mới trong cùng phòng với dòng "
-                  "xe cộ mới; một bên từ chối hoặc quá 30 giây thì phòng đóng và cả hai về sảnh."),
-            ("code", method(SRV + "core/Room.java", r"private void endRound\("), "Room.endRound()"),
-            ("code", method(SRV + "core/Room.java", r"private void leave\("), "Room.leave() – thoát / mất kết nối"),
-            ("p", "Khi một người thoát hoặc rớt mạng giữa trận, người còn lại được xử thắng với lý do QUIT hoặc "
-                  "DISCONNECT và không được hỏi thi đấu tiếp. MatchService.saveResult() cập nhật DB rồi nạp lại "
-                  "điểm của hai Session để sảnh hiển thị điểm mới ngay."),
-        ]),
-        ("3.9. Mất kết nối và đồng thời (S6, S7)", [
-            ("p", "Dọn dẹp khi một client rời đi phải theo đúng thứ tự: phòng trước (để đối thủ nhận kết quả), lời "
-                  "mời sau, cuối cùng mới xóa phiên và phát danh sách online mới."),
-            ("code", method(SRV + "net/ClientHandler.java", r"private void leaveEverything\(\)"),
-             "ClientHandler.leaveEverything()"),
-            ("b", [("Một phòng – một khóa: ", "Room dùng synchronized trên chính nó; luồng tick và luồng đọc của "
-                    "hai client không thể sửa phòng cùng lúc."),
-                   ("Cấu trúc dùng chung: ", "danh sách online, phòng, lời mời dùng ConcurrentHashMap; RoomManager "
-                    "bọc mỗi phòng trong safe() để lỗi của một phòng không dừng tick của phòng khác."),
-                   ("Không chặn khi gửi: ", "mọi send() chỉ đưa vào hàng đợi, nên luồng tick giữ khóa phòng không "
-                    "bao giờ phải chờ mạng – tránh deadlock giữa khóa phòng và I/O."),
-                   ("Ghi DB ngoài luồng tick: ", "match_events được ghi qua một executor riêng, tick 50 ms không bị "
-                    "chậm bởi truy vấn INSERT.")]),
-        ]),
+    "part_reqs": [
+        ["P1", "ServerSocket cổng 5000, mỗi client một ClientHandler và hai luồng; client treo không làm chặn client "
+               "khác", "YC10"],
+        ["P2", "Đăng nhập không trùng tài khoản; danh sách online cập nhật ngay khi có người vào hoặc ra", "YC01, YC03"],
+        ["P3", "Lời mời có trạng thái OFFLINE, BUSY, REJECTED, TIMEOUT; hết 30 giây không trả lời thì báo hết hạn",
+         "YC04"],
+        ["P4", "Tạo phòng, đếm ngược 3-2-1-GO, tick 50 ms, gửi RACE_UPDATE riêng cho từng người chơi", "YC05"],
+        ["P5", "Trọng tài: cắt tốc độ tối đa 360 km/h, va chạm làm xe choáng 1,5 s, xác định thắng / thua / hòa",
+         "YC06"],
+        ["P6", "Thoát trận hoặc mất kết nối (≤ 15 giây) thì đối thủ thắng và trận được ghi lý do", "YC07, YC11"],
+        ["P7", "Thi đấu tiếp khi cả hai đồng ý; phòng đóng khi một bên từ chối hoặc hết hạn", "YC08"],
+        ["P8", "Chốt kết quả trong một transaction, cộng điểm, ghi diễn biến vào match_events", "YC09"],
+    ],
+    "uc": {
+        "title": "Phần server: đăng nhập, lời mời, phòng đua",
+        "actors": [("P", "Người chơi", "left", 2.5)],
+        "cases": [
+            ("dn", "Đăng nhập", 0, 0), ("dx", "Đăng xuất", 0, 1), ("ol", "Xem danh sách\nngười chơi online", 0, 2),
+            ("td", "Thách đấu\nngười chơi", 0, 3), ("tl", "Trả lời lời mời", 0, 4),
+            ("dua", "Điều khiển xe\ntrong trận", 0, 5),
+            ("kiem", "Kiểm tra tài khoản\nđang online", 1, 0), ("hh", "Hết hạn 30 giây\n(không trả lời)", 1, 4),
+            ("kq", "Ghi kết quả\nvà điểm", 1, 5), ("tt", "Thi đấu tiếp", 1, 6.1),
+            ("thoat", "Thoát trận /\nmất kết nối", 1, 7.2),
+        ],
+        "links": [("P", c, "assoc") for c in ("dn", "dx", "ol", "td", "tl", "dua")]
+        + [("dn", "kiem", "include"), ("tl", "hh", "extend"), ("dua", "kq", "include"),
+           ("tt", "dua", "extend"), ("thoat", "dua", "extend")],
+        "row_h": 0.7,
+    },
+    "uc_text": (
+        "Sơ đồ chỉ gồm các ca sử dụng do server xử lý, tác nhân là người chơi qua client. Cột trái là chức năng người "
+        "chơi gọi trực tiếp. Cột phải là ca bao hàm (include) hoặc mở rộng (extend): kiểm tra tài khoản khi đăng "
+        "nhập, hết hạn lời mời, ghi kết quả khi trận kết thúc, thi đấu tiếp và thoát trận."
+    ),
+    "uc_specs": [
+        {
+            "name": "Mời thách đấu và trả lời lời mời",
+            "actor": "Người chơi (người mời, người được mời)",
+            "pre": "Cả hai đã đăng nhập; người mời không đang trong trận; người được mời đang Rảnh.",
+            "main": [
+                "Người mời chọn một người chơi và gửi INVITE.",
+                "Server kiểm tra: không tự mời mình, người mời chưa có lời mời khác, người được mời không đang trong "
+                "trận và không có lời mời đang chờ.",
+                "Server gửi INVITE_RECEIVED tới người được mời kèm thời hạn 30 giây.",
+                "Người được mời bấm Chấp nhận; server tạo phòng đua (RoomManager.createRoom) và gửi MATCH_START cho cả "
+                "hai.",
+            ],
+            "alt": [
+                "3a. Người được mời không online hoặc đang bận: server trả INVITE_RESULT OFFLINE hoặc BUSY cho người mời.",
+                "4a. Người được mời bấm Từ chối: người mời nhận INVITE_RESULT REJECTED.",
+                "4b. Quá 30 giây không trả lời: InviteManager.sweep() gửi INVITE_RESULT TIMEOUT cho người mời.",
+            ],
+            "post": "Nếu chấp nhận, hai người ở trạng thái Đang đấu trong một phòng mới. Nếu không, cả hai vẫn Rảnh và "
+                    "lời mời đã được xóa khỏi bộ nhớ.",
+        },
+        {
+            "name": "Điều khiển xe và thi đấu tiếp",
+            "actor": "Người chơi",
+            "pre": "Hai người đã vào phòng và đã qua đếm ngược (GO); trận ở trạng thái đua.",
+            "main": [
+                "Client gửi CAR_STATE (làn, tốc độ) khi người chơi đổi làn hoặc bấm ga / phanh.",
+                "Mỗi tick 50 ms, Room cập nhật hai xe bằng CarSim, xét va chạm với xe cộ và phát RACE_UPDATE cho từng "
+                "người.",
+                "Khi có xe về đích, server ghi kết quả (FINISH hoặc DRAW), gửi MATCH_RESULT rồi hỏi REMATCH_ASK.",
+                "Cả hai bấm Đồng ý; server tạo ván mới trong cùng phòng với xe cộ mới.",
+            ],
+            "alt": [
+                "2a. Va chạm xe cộ: xe choáng 1,5 giây, tốc độ về 0 và không tăng được cho tới khi hết choáng.",
+                "3a. Một bên thoát hoặc mất kết nối: đối thủ thắng với lý do QUIT hoặc DISCONNECT, phòng đóng và không "
+                "hỏi thi đấu tiếp.",
+                "4a. Một bên từ chối hoặc quá 30 giây: phòng đóng, cả hai về sảnh.",
+            ],
+            "post": "Kết quả và điểm mới được chốt trong CSDL và nạp lại vào phiên; hai người về trạng thái Rảnh khi "
+                    "phòng đóng.",
+        },
+    ],
+    "classes": {
+        "classes": [
+            ("GameServer", None, ["-services: ServerServices"],
+             ["+start(): void", "+stop(): void", "+withMysql(port): GameServer"], 0, 0, "blue"),
+            ("ServerServices", "record", ["sessions: SessionManager", "invites: InviteManager", "rooms: RoomManager"],
+             [], 1, 0, "orange"),
+            ("SessionManager", None, ["-online: Map<String, Session>"],
+             ["+login(req, conn): LoginResult", "+logout(s): void", "+onlineList(): List"], 2, 0, "orange"),
+            ("ClientHandler", None, ["-session: Session", "-outbox: BlockingQueue"],
+             ["+run(): void", "+send(message): void"], 0, 1, "blue"),
+            ("InviteManager", None, ["-pending: Map<Long, Invite>", "-byUser: Map<String, Long>"],
+             ["+invite(from, target): void", "+reply(replier, reply): void", "+sweep(): void"], 1, 1, "orange"),
+            ("RoomManager", None, ["-rooms: Map<Integer, Room>"],
+             ["+createRoom(a, b): Room", "+tickAll(): void", "+onQuit(s, roomId): void"], 2, 1, "purple"),
+            ("Session", None, ["-playerId: int", "-status: PlayerStatus"],
+             ["+send(message): void", "+info(): PlayerInfo"], 0, 2, "grey"),
+            ("MatchService", None, ["-matches: MatchRepository"],
+             ["+createMatch(room, a, b): int", "+saveResult(id, a, b, w, why): void", "+event(id, s, type, json): void"],
+             1, 2, "green"),
+            ("Room", None, ["-state: State", "-matchId: int"],
+             ["+startRound(): void", "+countdown(value): void", "+tick(): void", "+onQuit(s): void"], 2, 2, "purple"),
+            ("CarSim", None, ["-distance: double", "-lane: int", "-speed: double"],
+             ["+applyClient(cs, now): void", "+advance(now, tick, obs): Obstacle"], 2, 3, "purple"),
+        ],
+        "relations": [
+            ("GameServer", "ServerServices", "comp", "services"),
+            ("GameServer", "ClientHandler", "dep", "tạo mỗi kết nối"),
+            ("ClientHandler", "ServerServices", "dep", "gọi dịch vụ"),
+            ("ClientHandler", "Session", "comp", "phiên"),
+            ("ServerServices", "SessionManager", "agg", ""),
+            ("ServerServices", "InviteManager", "agg", ""),
+            ("ServerServices", "RoomManager", "agg", ""),
+            ("InviteManager", "RoomManager", "dep", "tạo phòng"),
+            ("RoomManager", "Room", "comp", "rooms"),
+            ("Room", "MatchService", "dep", ""),
+            ("Room", "CarSim", "comp", "2 xe"),
+        ],
+        "col_w": 2.7,
+        "width": 16.0,
+    },
+    "class_files": {
+        "GameServer": "server/src/main/java/racing/server/GameServer.java",
+        "ServerServices": "server/src/main/java/racing/server/core/ServerServices.java",
+        "SessionManager": "server/src/main/java/racing/server/core/SessionManager.java",
+        "ClientHandler": "server/src/main/java/racing/server/net/ClientHandler.java",
+        "InviteManager": "server/src/main/java/racing/server/core/InviteManager.java",
+        "RoomManager": "server/src/main/java/racing/server/core/RoomManager.java",
+        "Session": "server/src/main/java/racing/server/core/Session.java",
+        "MatchService": "server/src/main/java/racing/server/core/MatchService.java",
+        "Room": "server/src/main/java/racing/server/core/Room.java",
+        "CarSim": "server/src/main/java/racing/server/core/CarSim.java",
+    },
+    "class_text": (
+        "Biểu đồ lớp gồm 10 lớp chính, tô màu theo vai trò: xanh dương là lớp mạng và điểm vào, cam là dịch vụ phiên "
+        "và lời mời, tím là phòng đua và trọng tài, xanh lá là ghi dữ liệu, xám là phiên người chơi. GameServer tạo một "
+        "ServerServices dùng chung cho mọi ClientHandler. Phương thức trên hình đều có trong mã nguồn."
+    ),
+    "class_rows": [
+        ["GameServer", "Mở cổng 5000, vòng accept, scheduler tick 50 ms và quét lời mời / thi đấu tiếp mỗi giây"],
+        ["ClientHandler", "Một kết nối TCP: vòng đọc, hàng đợi gửi riêng, phân loại thông điệp theo trạng thái đăng nhập"],
+        ["ServerServices", "Bó các dịch vụ lõi (phiên, lời mời, phòng) để mọi ClientHandler dùng chung"],
+        ["SessionManager", "Đăng nhập không trùng, đăng xuất, danh sách online, phát ONLINE_LIST"],
+        ["Session", "Một người chơi đã đăng nhập: mã, điểm, trạng thái, phòng hiện tại và kênh gửi"],
+        ["InviteManager", "Lời mời 1–1, hẹn giờ 30 giây, kết quả OFFLINE / BUSY / REJECTED / TIMEOUT"],
+        ["RoomManager", "Tạo và đóng phòng, tick toàn bộ phòng, định tuyến thông điệp trong trận"],
+        ["Room", "Máy trạng thái WAITING – COUNTDOWN – RACING – AWAIT_REMATCH – CLOSED, luật thắng / hòa"],
+        ["CarSim", "Trọng tài một xe: cắt tốc độ, tích phân quãng đường, va chạm và choáng"],
+        ["MatchService", "Tạo bản ghi trận, chốt kết quả và nạp lại điểm, ghi diễn biến không chặn luồng tick"],
+    ],
+    "sequences": [
+        {
+            "title": "Mời thách đấu, chấp nhận và bắt đầu trận",
+            "text": "Hình dưới mô tả một lời mời được chấp nhận. InviteManager chuyển lời mời, RoomManager tạo phòng, Room "
+                    "bắt đầu ván và gửi MATCH_START cho từng người. Đếm ngược 3-2-1-GO do RoomManager lên lịch theo "
+                    "từng giây.",
+            "participants": [("A", "Người mời", "actor"), ("IM", "InviteManager", "object"),
+                             ("B", "Người được mời", "actor"), ("RM", "RoomManager", "object"),
+                             ("R", "Room", "object")],
+            "messages": [
+                ("A", "IM", "INVITE(bob)", "sync"),
+                ("IM", "B", "INVITE_RECEIVED", "sync"),
+                ("B", "IM", "INVITE_REPLY(accept)", "sync"),
+                ("IM", "RM", "createRoom(a, b)", "sync"),
+                ("RM", "R", "new Room; startRound()", "sync"),
+                ("R", "A", "MATCH_START (góc nhìn A)", "return"),
+                ("R", "B", "MATCH_START (góc nhìn B)", "return"),
+                ("RM", "RM", "lên lịch đếm ngược", "self"),
+                ("R", "A", "COUNTDOWN 3 → 2 → 1 → 0", "return"),
+                ("R", "B", "COUNTDOWN 3 → 2 → 1 → 0", "return"),
+            ],
+            "gap": 1.35,
+            "width": 16.0,
+        },
+        {
+            "title": "Vòng trọng tài trong trận và kết thúc ván",
+            "text": "Client gửi CAR_STATE khi đổi làn hoặc ga / phanh, server cập nhật CarSim. Mỗi tick 50 ms, Room tiến "
+                    "hai xe và gửi RACE_UPDATE cho từng người. Khi có xe về đích, Room gọi MatchService.saveResult() để "
+                    "chốt trận trong một transaction rồi gửi MATCH_RESULT.",
+            "participants": [("A", "Người chơi", "actor"), ("CH", "ClientHandler", "object"),
+                             ("R", "Room", "object"), ("CS", "CarSim", "object"),
+                             ("MS", "MatchService", "object")],
+            "messages": [
+                ("A", "CH", "CAR_STATE(lane, speed)", "sync"),
+                ("CH", "R", "onCarState(s, cs)", "sync"),
+                ("R", "CS", "applyClient(cs, now)", "sync"),
+                ("R", "CS", "advance(now, tick, obs)", "sync"),
+                ("CS", "R", "Obstacle hoặc null", "return"),
+                ("R", "A", "RACE_UPDATE", "return"),
+                ("note", "R", "nếu có xe về đích: endRound()"),
+                ("R", "MS", "saveResult(matchId, ...)", "sync"),
+                ("R", "A", "MATCH_RESULT, REMATCH_ASK", "return"),
+            ],
+            "frames": [(3, 5, "mỗi 50 ms")],
+            "gap": 1.35,
+            "width": 16.0,
+        },
+    ],
+    "er": {
+        "entities": [
+            ("players", [("player_id", "PK", "INT"), ("username", "", "VARCHAR(50)"),
+                         ("password_hash", "", "VARCHAR(255)"), ("points", "", "INT"), ("wins", "", "INT"),
+                         ("losses", "", "INT"), ("draws", "", "INT"), ("created_at", "", "DATETIME")],
+             0.3, 5.0, "blue"),
+            ("matches", [("match_id", "PK", "INT"), ("room_code", "", "VARCHAR(20)"),
+                         ("player1_id", "FK", "INT"), ("player2_id", "FK", "INT"), ("winner_id", "FK", "INT"),
+                         ("status", "", "ENUM"), ("end_reason", "", "ENUM"), ("started_at", "", "DATETIME"),
+                         ("ended_at", "", "DATETIME")],
+             4.2, 5.0, "orange"),
+            ("match_events", [("event_id", "PK", "BIGINT"), ("match_id", "FK", "INT"), ("player_id", "FK", "INT"),
+                              ("event_type", "", "VARCHAR(30)"), ("event_time", "", "DATETIME(3)"),
+                              ("payload", "", "JSON")],
+             4.2, 1.9, "green"),
+        ],
+        "relations": [
+            ("players", "matches", "1", "N", "đấu", (0.0, 0.0)),
+            ("matches", "match_events", "1", "N", "ghi nhận", (0.0, 0.0)),
+            ("players", "match_events", "1", "N", "tạo sự kiện", (0.0, 0.0)),
+        ],
+        "W": 7.2,
+        "H": 5.3,
+        "width": 13.5,
+    },
+    "er_text": [
+        "Server đọc và ghi ba bảng. Bảng players: đọc khi đăng nhập và khi nạp lại điểm sau trận (findById), ghi các "
+        "cột points, wins, losses, draws khi chốt trận. Bảng matches: INSERT khi bắt đầu ván (room_code, player1_id, "
+        "player2_id) và UPDATE khi kết thúc (winner_id, status, end_reason, ended_at).",
+        "Bảng match_events chỉ được INSERT. Mỗi va chạm, thoát, mất kết nối, về đích hoặc thi đấu tiếp là một dòng, ghi "
+        "qua một executor riêng để không làm chậm tick. Cột payload kiểu JSON lưu thông tin kèm theo như làn, quãng "
+        "đường và thời gian. Khóa chính và event_time do CSDL tự sinh, không lấy từ client.",
+    ],
+    "screens": [],
+    "results": [
+        ["Khung server và luồng kết nối (S1)",
+         "Đạt (SocketSmokeTest, ClientHandlerTest): đăng nhập, mời, thoát và bảng xếp hạng qua socket thật"],
+        ["Quản lý phiên và danh sách online (S2)",
+         "Đạt (SessionManagerTest): chống đăng nhập trùng, đăng xuất, danh sách online gửi tới mọi người"],
+        ["Lời mời thách đấu (S3)",
+         "Đạt (InviteManagerTest): OFFLINE, BUSY, REJECTED, TIMEOUT; không tự mời mình; người mời rớt mạng"],
+        ["Phòng đua và trọng tài (S4)",
+         "Đạt (RoomTest, CarSimTest): đếm ngược, cắt tốc độ, tích phân quãng đường, va chạm choáng 1,5 giây"],
+        ["Kết thúc ván, lưu kết quả, thi đấu tiếp (S5)",
+         "Đạt (RoomTest, MatchServiceTest): thắng, hòa cùng tick, thi đấu tiếp, ghi diễn biến không chặn"],
+        ["Thoát trận và mất kết nối (S6)",
+         "Đạt (RoomTest) về luật thoát và mất kết nối; thời gian 15 giây kiểm tra thủ công khi demo"],
+        ["Nhiều phòng song song (S7)",
+         "Đạt (RoomTest.twoRoomsDoNotMixUpdates); kịch bản T15 chạy thủ công khi demo"],
     ],
     "tests": [
-        ["T2", "Đăng nhập cùng tài khoản ở 2 máy", "Máy sau bị từ chối: \"Tài khoản đang đăng nhập ở nơi khác\"", "Sửa lỗi"],
-        ["T3", "3 client online, 1 client thoát", "2 client còn lại thấy danh sách cập nhật trong 1 s", "Sửa lỗi"],
-        ["T4", "Mời người đang thi đấu", "Nhận BUSY, người kia không hiện hộp thoại", "Sửa lỗi"],
-        ["T5", "Không trả lời lời mời 30 s", "Người mời nhận TIMEOUT, cả hai vẫn Rảnh", "Sửa lỗi"],
-        ["T6", "Từ chối lời mời", "Người mời nhận REJECTED", "Sửa lỗi"],
-        ["T10", "Về đích cùng tick (script t10-draw)", "Hòa, mỗi người +1, winner_id NULL", "Sửa lỗi"],
-        ["T12", "Rút mạng client đang đua", "≤ 15 s đối thủ thắng, end_reason = DISCONNECT", "Sửa lỗi"],
-        ["T15", "2 phòng đua cùng lúc (4 client)", "Không lẫn dữ liệu giữa phòng", "Sửa lỗi"],
-        ["T17", "Gửi CAR_STATE tốc độ 999 (script)", "Server cắt về 360, không thắng nhanh bất thường", "Sửa lỗi"],
+        ["T2", "Đăng nhập cùng tài khoản ở 2 máy",
+         "Máy sau bị từ chối với thông báo “Tài khoản đang đăng nhập ở nơi khác”", "Đạt (SessionManagerTest)"],
+        ["T3", "3 client online, 1 client đăng xuất",
+         "Hai client còn lại nhận danh sách online đã bớt người", "Đạt (SessionManagerTest)"],
+        ["T4", "Mời người đang thi đấu", "Người mời nhận BUSY; người được mời không nhận lời mời",
+         "Đạt (InviteManagerTest)"],
+        ["T5", "Không trả lời lời mời 30 giây", "Người mời nhận TIMEOUT; cả hai vẫn Rảnh",
+         "Đạt (InviteManagerTest)"],
+        ["T6", "Từ chối lời mời", "Người mời nhận REJECTED; cả hai vẫn Rảnh", "Đạt (InviteManagerTest)"],
+        ["T8", "Va chạm xe cộ", "Tốc độ về 0 trong 1,5 giây; va chạm được ghi vào diễn biến",
+         "Đạt (RoomTest, CarSimTest)"],
+        ["T9", "Về đích trước", "Người về đích thắng, điểm cộng đúng", "Đạt (RoomTest)"],
+        ["T10", "Về đích cùng tick", "Hòa, mỗi người +1 điểm, không có người thắng",
+         "Đạt (racing-tools; RoomTest)"],
+        ["T11", "Bấm Thoát trận giữa chừng", "Đối thủ thắng với lý do QUIT, phòng đóng",
+         "Đạt (racing-tools; RoomTest)"],
+        ["T12", "Rút mạng client đang đua", "Đối thủ thắng với lý do DISCONNECT trong ≤ 15 giây",
+         "Đạt (RoomTest); thời gian 15 giây chạy thủ công khi demo"],
+        ["T13", "Cả hai đồng ý thi đấu tiếp", "Ván mới trong cùng phòng, xe cộ mới, đếm ngược lại",
+         "Đạt (RoomTest)"],
+        ["T14", "Một bên từ chối thi đấu tiếp", "Phòng đóng, cả hai về sảnh", "Đạt (RoomTest)"],
+        ["T15", "2 phòng đua cùng lúc", "Không lẫn RACE_UPDATE giữa hai phòng", "Đạt (RoomTest)"],
+        ["T17", "Gửi CAR_STATE tốc độ 999", "Server cắt tốc độ về mức tối đa, không về đích nhanh bất thường",
+         "Đạt (racing-tools)"],
     ],
     "unit_tests": [
         ("server/src/test/java/racing/server/core/RoomTest.java",
-         "Đếm ngược, về đích, hòa cùng tick, thoát, mất kết nối, rematch đồng ý / từ chối / hết hạn"),
+         "Đếm ngược, về đích, hòa cùng tick, thoát, mất kết nối, thi đấu tiếp đồng ý / từ chối / hết hạn, hai phòng song song"),
         ("server/src/test/java/racing/server/core/InviteManagerTest.java",
-         "Tự mời, BUSY, OFFLINE, REJECTED, TIMEOUT bằng đồng hồ giả, người mời rớt mạng"),
+         "OFFLINE, BUSY, REJECTED, TIMEOUT bằng đồng hồ giả; tự mời mình; người mời hoặc người được mời rớt mạng"),
         ("server/src/test/java/racing/server/core/SessionManagerTest.java",
-         "Đăng nhập đúng / sai, chống đăng nhập trùng, đăng xuất, danh sách online"),
+         "Sai mật khẩu, chống đăng nhập trùng, đăng xuất, danh sách online gửi tới mọi người"),
         ("server/src/test/java/racing/server/core/CarSimTest.java",
-         "Cắt tốc độ, tích phân quãng đường, va chạm với xe cộ đang chạy, choáng 1,5 s"),
-        ("server/src/test/java/racing/server/core/SocketSmokeTest.java", "Kết nối socket thật tới server, PING/PONG"),
-        ("server/src/test/java/racing/server/net/ClientHandlerTest.java", "Hàng đợi gửi đầy thì ngắt client chậm"),
-        ("server/src/test/java/racing/server/ServerIntegrationTest.java", "Trọn vòng đăng nhập – mời – đua với MySQL"),
+         "Cắt tốc độ, quãng đường do server tích phân, va chạm với xe cộ đang chạy, choáng 1,5 giây"),
+        ("server/src/test/java/racing/server/core/MatchServiceTest.java",
+         "Ghi diễn biến không chặn luồng gọi và giữ đúng thứ tự"),
+        ("server/src/test/java/racing/server/net/ClientHandlerTest.java",
+         "send() không chặn khi client ngừng đọc"),
+        ("server/src/test/java/racing/server/core/SocketSmokeTest.java",
+         "Đăng nhập, mời, thoát và bảng xếp hạng qua socket thật"),
+        ("server/src/test/java/racing/server/ServerIntegrationTest.java",
+         "Trọn vòng đăng nhập – mời – đua qua socket với MySQL (chạy trên CI có dịch vụ MySQL)"),
     ],
-    "collab": [
-        ("Với Trần Việt Anh: ", "dùng hợp đồng common (Message, MessageType, DTO) và DAO nền; thống nhất luật hòa "
-         "cùng tick và cách lưu kết quả trong transaction (task D5)."),
-        ("Với Vũ Văn Hiếu: ", "thống nhất thứ tự LOGIN_RESULT / ONLINE_LIST và các trạng thái INVITE_RESULT để sảnh "
-         "hiển thị đúng thông báo."),
-        ("Với Nguyễn Trần Mai Anh: ", "đưa mẫu case trong ClientHandler để thêm LEADERBOARD_REQ, REGISTER, "
-         "MATCH_HISTORY_REQ; cùng đặt các điểm gọi ghi sự kiện START, COLLISION, FINISH, QUIT, DISCONNECT."),
+    "conclusion": [
+        "Về kết quả, em hoàn thành đủ bảy task S1–S7 của phần server. Server phục vụ nhiều phòng đua song song mà không "
+        "lẫn dữ liệu giữa các phòng. Luật thắng, hòa, thoát và mất kết nối đều do server quyết định, nên sửa client "
+        "không làm thay đổi kết quả trận. Một số lỗi phát hiện khi kiểm thử đã được sửa: ONLINE_LIST bị bỏ qua lúc "
+        "đăng nhập, và hàng đợi gửi chặn luồng tick khi một client không đọc.",
+        "Qua phần việc này, em nắm được cách lập trình TCP Socket với ServerSocket và luồng đối tượng, đa luồng với "
+        "ExecutorService, ScheduledExecutorService và BlockingQueue, đồng bộ hóa bằng synchronized và ConcurrentHashMap. "
+        "Em cũng học cách tách lõi nghiệp vụ khỏi socket để kiểm thử bằng đồng hồ giả.",
+        "Hạn chế: server dùng I/O chặn với hai luồng cho mỗi client nên chưa mở rộng tốt tới hàng trăm kết nối. Giao "
+        "thức chưa mã hóa TLS. Luật hòa chỉ xảy ra khi hai xe về đích cùng một tick, nên khó tái hiện bằng hai người "
+        "thật, em phải dùng racing-tools để kiểm tra.",
+        "Hướng phát triển: chuyển sang NIO hoặc dùng số luồng cố định để giảm chi phí mỗi kết nối, lưu lịch sử diễn biến "
+        "để xem lại trận trên giao diện, và mã hóa kênh truyền khi triển khai ngoài mạng LAN.",
     ],
-    "problems": [
-        ["Một client không đọc làm đứng tick của cả phòng (writeObject bị chặn khi bộ đệm TCP đầy)",
-         "Hàng đợi gửi 256 tin và luồng ghi riêng cho từng client; hàng đợi đầy thì ngắt client đó"],
-        ["Client nhận RACE_UPDATE không đổi dù server đã cập nhật", "Gọi out.reset() sau mỗi writeObject"],
-        ["Người đăng nhập sau cùng thấy sảnh trống", "Gửi lại ONLINE_LIST ngay sau LOGIN_RESULT"],
-        ["Luật hòa khó tái hiện bằng 2 người thật", "Chốt hòa theo cùng tick tại server, kiểm thử bằng script T10"],
-        ["Rớt mạng không phát hiện được (socket vẫn mở)", "SO_TIMEOUT 15 s kết hợp heartbeat PING 5 s của client"],
-    ],
-    "summary": (
-        "Tự đánh giá: hoàn thành đủ 7 task S1–S7; server chạy ổn định với nhiều phòng song song, chống được gian "
-        "lận tốc độ / quãng đường và xử lý đúng mọi cách kết thúc trận. Qua phần việc này em nắm được cách lập "
-        "trình TCP Socket với ServerSocket / Socket, luồng vào ra đối tượng, lập trình đa luồng với "
-        "ExecutorService, ScheduledExecutorService, BlockingQueue và đồng bộ hóa bằng synchronized / "
-        "ConcurrentHashMap. Hạn chế: server dùng I/O chặn (mỗi client hai luồng), chưa dùng NIO, chưa mã hóa TLS."),
 }
-
-# Dùng để kiểm tra nhanh khi build: đoạn SQL / khai báo phải còn trong mã nguồn.
-_ = lines_of(SRV + "core/Room.java", r"public synchronized void startRound", 1)

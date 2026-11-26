@@ -30,3 +30,6 @@ dependency-reduced-pom.xml
 
 # Claude Code worktrees
 .claude/
+
+# ảnh sơ đồ sinh lại mỗi lần build báo cáo cá nhân
+report/individual/out/img/
