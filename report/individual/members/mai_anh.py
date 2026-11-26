@@ -256,8 +256,6 @@ CONTENT = {
     ],
     "screens": [
         (shared.SHOTS / "register.png", "Hộp thoại đăng ký tài khoản (RegisterDialog)", 8.0),
-        (shared.SHOTS / "leaderboard-loading.png",
-         "Bảng xếp hạng khi đang tải dữ liệu từ server (LeaderboardFrame)", 12.0),
     ],
     "results": [
         ["Lược đồ và CSDL (M1)", "Ba bảng với khóa ngoại, chỉ mục, mã utf8mb4; schema.sql và seed.sql nạp được; "

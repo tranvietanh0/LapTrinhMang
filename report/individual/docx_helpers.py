@@ -11,7 +11,7 @@ from docx.oxml.ns import qn
 from docx.shared import Cm, Pt, RGBColor
 
 FONT = "Times New Roman"
-BODY_PT = 14
+BODY_PT = 13
 FIRST_LINE_CM = 1.27  # thut dau dong doan van than bai
 TEXT_WIDTH_CM = 16.0  # A4 21 cm - le trai 3 cm - le phai 2 cm
 KEEP_TOGETHER_ROWS = 8  # bang co toi da chung nay dong du lieu duoc giu tren cung mot trang
@@ -20,8 +20,11 @@ KEEP_TOGETHER_ROWS = 8  # bang co toi da chung nay dong du lieu duoc giu tren cu
 class Report:
     def __init__(self):
         self.doc = Document()
+        self.chapter = 0  # so chuong hien tai: hinh / bang danh so theo chuong (Hinh 2.3)
         self.fig_no = 0
         self.tab_no = 0
+        self.fig_list: list[str] = []  # chu thich hinh theo thu tu -> danh sach hinh ve
+        self.tab_list: list[str] = []
         self.headings: list[tuple[int, str]] = []  # (cap, tieu de) theo thu tu xuat hien -> muc luc
         self._setup_styles()
 
@@ -36,7 +39,7 @@ class Report:
         # Kich thuoc, gian dong theo mau bao cao cua khoa (TNR 14, H1 20 can giua, H2 16, H3 14, chu thich 13)
         cap = d.styles["Caption"]
         cap.font.name = FONT
-        cap.font.size = Pt(13)
+        cap.font.size = Pt(12)
         cap.font.bold = False
         cap.font.color.rgb = RGBColor(0, 0, 0)
         cap.element.rPr.rFonts.set(qn("w:eastAsia"), FONT)
@@ -49,7 +52,7 @@ class Report:
         st.element.rPr.rFonts.set(qn("w:eastAsia"), FONT)
         st.paragraph_format.space_after = Pt(6)
         st.paragraph_format.line_spacing = 1.15
-        for lvl, size, before, after in ((1, 20, 0, 12), (2, 16, 18, 6), (3, 14, 12, 5)):
+        for lvl, size, before, after in ((1, 16, 0, 12), (2, 14, 12, 6), (3, 13, 8, 4)):
             h = d.styles[f"Heading {lvl}"]
             h.font.name = FONT
             h.font.size = Pt(size)
@@ -70,9 +73,9 @@ class Report:
             d.styles[name].font.size = Pt(BODY_PT)
 
     # ---- khoi noi dung ---------------------------------------------------------------------
-    def h(self, level: int, text: str):
-        """Tieu de; cap 1 luon bat dau trang moi (khong chen them neu vua co ngat trang)."""
-        if level == 1 and not self._at_page_start():
+    def h(self, level: int, text: str, new_page: bool = True):
+        """Tieu de; cap 1 bat dau trang moi (tru khi new_page=False; khong chen them neu vua co ngat trang)."""
+        if level == 1 and new_page and not self._at_page_start():
             self.page_break()
         self.headings.append((level, text))
         return self.doc.add_heading(text, level=level)
@@ -219,9 +222,11 @@ class Report:
               size=10.5, align_center_cols: set[int] | None = None):
         if caption:
             self.tab_no += 1
+            label = f"Bảng {self._num(self.tab_no)}. {caption}"
+            self.tab_list.append(label)
             cap = self.doc.add_paragraph(style="Caption")
             cap.alignment = WD_ALIGN_PARAGRAPH.CENTER
-            r = cap.add_run(f"Bảng {self.tab_no}. {caption}")
+            r = cap.add_run(label)
             r.bold = r.italic = True
             cap.paragraph_format.keep_with_next = True  # chu thich khong bi tach khoi bang
         t = self.doc.add_table(rows=1, cols=len(headers))
@@ -276,16 +281,25 @@ class Report:
     def figure(self, path: str | Path, caption: str, width_cm: float = 16.0):
         path = Path(path)
         if not path.exists():
-            self.p(f"[thiếu hình: {path.name}]", italic=True)
-            return
+            raise FileNotFoundError(f"thiếu hình: {path}")
         self.fig_no += 1
         para = self.doc.add_paragraph()
         para.alignment = WD_ALIGN_PARAGRAPH.CENTER
         para.add_run().add_picture(str(path), width=Cm(width_cm))
         cap = self.doc.add_paragraph(style="Caption")
         cap.alignment = WD_ALIGN_PARAGRAPH.CENTER
-        r = cap.add_run(f"Hình {self.fig_no}. {caption}")
+        label = f"Hình {self._num(self.fig_no)}. {caption}"
+        self.fig_list.append(label)
+        r = cap.add_run(label)
         r.italic = True
+
+    def _num(self, n: int) -> str:
+        return f"{self.chapter}.{n}" if self.chapter else str(n)
+
+    def start_chapter(self, number: int, title: str):
+        """Tieu de chuong; dat lai bo dem hinh / bang."""
+        self.chapter, self.fig_no, self.tab_no = number, 0, 0
+        return self.h(1, f"CHƯƠNG {number}. {title}")
 
     def page_break(self):
         self.doc.add_page_break()

@@ -12,7 +12,7 @@ Bài tập lớn môn Lập trình mạng, lớp LTM-2026-2-N01. Client Java Swi
 |---|---|---|
 | `common` | `Message`, `MessageType`, DTO, `GameConfig` dùng chung | Trần Việt Anh |
 | `server` | `GameServer`, `net/ClientHandler`, `core/` (`SessionManager`, `InviteManager`, `Room`, `RoomManager`, `CarSim` trọng tài, `MatchService`, `AccountService`), `db/` (DAO, JDBC repository) | Phạm Thị Thu Phương (server), Trần Việt Anh (`db/` nền), Nguyễn Trần Mai Anh (lịch sử trận, sự kiện) |
-| `client` | `net/NetworkClient`, `ui/` (`LoginFrame`, `RegisterDialog`, `LobbyFrame`, `InviteDialog`, `LeaderboardFrame`, `HistoryFrame`, `RaceLauncher`), `ui/race/` (màn hình đua) | Vũ Văn Hiếu (sảnh), Trần Việt Anh (đua), Nguyễn Trần Mai Anh (xếp hạng, đăng ký, lịch sử) |
+| `client` | `net/NetworkClient`, `ui/` (`LoginFrame`, `RegisterDialog`, `LobbyFrame`, `InviteDialog`, `LeaderboardFrame`, `HistoryFrame`, `RaceLauncher`), `ui/race/` (màn hình đua) | Vũ Quốc Hiếu (sảnh), Trần Việt Anh (đua), Nguyễn Trần Mai Anh (xếp hạng, đăng ký, lịch sử) |
 | `db/` | `schema.sql`, `seed.sql`, `reset-db.sql`; mô tả bảng và truy vấn trong `docs/DB.md` | Trần Việt Anh (schema), Nguyễn Trần Mai Anh (DB.md, truy vấn) |
 | `tools` | `ScriptedClient`: client dòng lệnh nói giao thức để test server và chạy kịch bản T10, T17 | Trần Việt Anh |
 | `docs/` | `TEST-PLAN.md`: 19 kịch bản kiểm thử tích hợp; `DB.md`: cơ sở dữ liệu | Trần Việt Anh, Nguyễn Trần Mai Anh |
